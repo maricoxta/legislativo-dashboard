@@ -1,162 +1,111 @@
-# Legislativo BR — Painel de Proposições
+# Legislativo BR
 
-Painel fullstack para acompanhamento de proposições legislativas da **Câmara dos Deputados** e do **Senado Federal**, construído com Next.js 16, Supabase e Tailwind CSS v4.
+Painel para acompanhamento de proposições legislativas da **Câmara dos Deputados** e do **Senado Federal**. Busque, filtre, salve favoritos e monitore temas de interesse em tempo real.
 
-## Funcionalidades
+---
 
-- **Dashboard** com KPIs, gráficos Recharts e lista de proposições recentes de ambas as casas
-- **Proposições Câmara** — navegação por tipo (PL, PEC, MPV…), filtros por tema, partido, UF, ano e situação
-- **Proposições Senado** — mesma interface para matérias do Senado
-- **Busca avançada** com todos os filtros combinados e histórico persistido no Supabase
-- **Drawer de detalhes** — tramitações, autores, relatores e votações em painel lateral sem sair da página
-- **Monitoramento de temas** — crie e gerencie temas personalizados com palavras-chave (requer login)
-- **Agenda legislativa** — próximas votações e eventos das comissões
-- **Auth** com email/senha e Google OAuth via Supabase
-- **Cache de API** — respostas das APIs externas armazenadas no Supabase por 30–60 min
+## O que o projeto faz
+
+| Tela | Descrição |
+|---|---|
+| **Dashboard** | KPIs do ano corrente, 3 gráficos (situação, tendência, tema) e últimas proposições |
+| **Proposições Câmara** | Lista paginada por tipo (PL, PEC, MPV…) com filtros de tema, partido, UF e situação |
+| **Proposições Senado** | Mesma experiência para matérias do Senado |
+| **Busca avançada** | Filtros combinados; histórico salvo automaticamente para usuários logados |
+| **Detalhes** | Drawer lateral com tramitações, autores, relatores e votações sem sair da página |
+| **Monitoramento** | Crie alertas por palavras-chave; temas persistem na conta Supabase |
+| **Agenda** | Próximos eventos e votações das comissões |
+
+---
 
 ## Stack
 
-| Camada | Tecnologia |
-|---|---|
-| Framework | Next.js 16.2.7 (App Router) |
-| Linguagem | TypeScript 5 |
-| Estilização | Tailwind CSS v4 |
-| Auth + Banco | Supabase (PostgreSQL + Auth) |
-| Gráficos | Recharts 3 |
-| Renderização | React 19 Server Components + Client Components |
+- **Next.js 16** (App Router, Server Components, API Routes)
+- **TypeScript 5** + **Tailwind CSS v4**
+- **Supabase** — auth (email + Google OAuth), PostgreSQL, cache de API
+- **Recharts** para visualizações
+- **React 19**
 
-## APIs Públicas Consumidas
+---
 
-- **Câmara:** `https://dadosabertos.camara.leg.br/api/v2`
-- **Senado:** `https://legis.senado.leg.br/dadosabertos`
+## Rodando localmente
 
-Todas as chamadas passam pelas API routes Next.js (`/api/camara/*`, `/api/senado/*`), que adicionam cache e evitam CORS no browser.
+### Pré-requisitos
 
-## Estrutura do Projeto
+- Node.js 18+
+- Conta Supabase (opcional — o dashboard funciona sem ela)
 
-```
-app/
-├── page.tsx                        # Dashboard principal
-├── layout.tsx                      # Shell: Sidebar + Topbar + DrawerProvider
-├── busca/page.tsx                  # Busca avançada
-├── monitoramento/page.tsx          # Temas monitorados (auth obrigatório)
-├── agenda/page.tsx                 # Agenda legislativa
-├── proposicoes/
-│   ├── camara/[tipo]/page.tsx      # PLs, PECs, MPVs…
-│   └── senado/[tipo]/page.tsx      # Matérias do Senado
-├── auth/
-│   ├── login/page.tsx              # Login / Cadastro
-│   └── callback/route.ts           # Callback OAuth
-└── api/
-    ├── camara/proposicoes/route.ts  # Proxy + cache 30 min
-    ├── camara/[id]/route.ts         # Detalhe + tramitações + autores + votações (60 min)
-    ├── senado/materias/route.ts     # Proxy + cache 30 min
-    ├── senado/[codigo]/route.ts     # Detalhe completo (60 min)
-    ├── temas/route.ts               # CRUD temas monitorados (auth)
-    ├── favoritos/route.ts           # CRUD proposições salvas (auth)
-    └── buscas/route.ts              # Histórico de buscas (auth)
-
-components/
-├── layout/         # Sidebar, Topbar
-├── dashboard/      # StatCard, Charts (Recharts)
-├── proposicoes/    # BillCard, SenadoCard, Filters
-├── detalhe/        # Drawer, DrawerProvider, JourneyBar, Timeline
-├── busca/          # BuscaForm
-├── monitoramento/  # MonitoramentoClient
-└── ui/             # StatusBadge, Skeleton
-
-lib/
-├── supabase/
-│   ├── client.ts   # createBrowserClient (retorna null sem credenciais)
-│   ├── server.ts   # createServerClient com cookies
-│   └── admin.ts    # createClient com service_role (cache write)
-├── cache.ts        # get/set na tabela api_cache
-├── config.ts       # URLs das APIs, temas, tipos, partidos, UFs
-└── utils.ts
-
-types/
-├── camara.ts       # ProposicaoCamara, Tramitacao, Autor, Votacao…
-└── senado.ts       # MateriaSenado, TramitacaoSenado…
-
-proxy.ts            # Guarda rotas protegidas (substitui middleware.ts no Next 16)
-```
-
-## Configuração Local
-
-### 1. Instalar dependências
+### Instalação
 
 ```bash
+git clone https://github.com/maricoxta/legislativo-dashboard
+cd legislativo-dashboard
 npm install
 ```
 
-### 2. Variáveis de ambiente
+### Variáveis de ambiente
 
-Copie `.env.local` e preencha com suas credenciais Supabase:
+Edite o arquivo `.env.local` na raiz:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-> O app funciona **sem Supabase** (dashboard, busca e proposições carregam normalmente). Auth, monitoramento e favoritos ficam desabilitados até as credenciais serem preenchidas.
+> Sem Supabase configurado o app abre normalmente — dashboard, busca e proposições funcionam. Auth, monitoramento e favoritos ficam desabilitados.
 
-### 3. Schema Supabase (SQL Editor)
+### Banco de dados (Supabase SQL Editor)
 
 ```sql
--- Temas monitorados
-CREATE TABLE temas_monitorados (
-  id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id    UUID REFERENCES auth.users NOT NULL,
-  nome       TEXT NOT NULL,
-  emoji      TEXT DEFAULT '🔍',
-  cor        TEXT DEFAULT 'blue',
-  keywords   TEXT[] NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table temas_monitorados (
+  id         uuid default gen_random_uuid() primary key,
+  user_id    uuid references auth.users not null,
+  nome       text not null,
+  emoji      text default '🔍',
+  cor        text default 'blue',
+  keywords   text[] not null,
+  created_at timestamptz default now()
 );
 
--- Proposições salvas
-CREATE TABLE proposicoes_salvas (
-  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id       UUID REFERENCES auth.users NOT NULL,
-  proposicao_id TEXT NOT NULL,
-  source        TEXT CHECK (source IN ('camara','senado')) NOT NULL,
-  sigla         TEXT NOT NULL,
-  ementa        TEXT,
-  saved_at      TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, proposicao_id)
+create table proposicoes_salvas (
+  id            uuid default gen_random_uuid() primary key,
+  user_id       uuid references auth.users not null,
+  proposicao_id text not null,
+  source        text check (source in ('camara','senado')) not null,
+  sigla         text not null,
+  ementa        text,
+  saved_at      timestamptz default now(),
+  unique(user_id, proposicao_id)
 );
 
--- Cache das APIs externas
-CREATE TABLE api_cache (
-  cache_key  TEXT PRIMARY KEY,
-  data       JSONB NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+create table api_cache (
+  cache_key  text primary key,
+  data       jsonb not null,
+  expires_at timestamptz not null,
+  created_at timestamptz default now()
 );
 
--- Histórico de buscas
-CREATE TABLE historico_buscas (
-  id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id         UUID REFERENCES auth.users NOT NULL,
-  termo           TEXT NOT NULL,
-  filtros         JSONB,
-  resultado_count INTEGER,
-  searched_at     TIMESTAMPTZ DEFAULT NOW()
+create table historico_buscas (
+  id              uuid default gen_random_uuid() primary key,
+  user_id         uuid references auth.users not null,
+  termo           text not null,
+  filtros         jsonb,
+  resultado_count integer,
+  searched_at     timestamptz default now()
 );
 
--- RLS
-ALTER TABLE temas_monitorados  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE proposicoes_salvas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE historico_buscas   ENABLE ROW LEVEL SECURITY;
+alter table temas_monitorados  enable row level security;
+alter table proposicoes_salvas enable row level security;
+alter table historico_buscas   enable row level security;
 
-CREATE POLICY "own rows" ON temas_monitorados  USING (user_id = auth.uid());
-CREATE POLICY "own rows" ON proposicoes_salvas USING (user_id = auth.uid());
-CREATE POLICY "own rows" ON historico_buscas   USING (user_id = auth.uid());
+create policy "own rows" on temas_monitorados  using (user_id = auth.uid());
+create policy "own rows" on proposicoes_salvas using (user_id = auth.uid());
+create policy "own rows" on historico_buscas   using (user_id = auth.uid());
 ```
 
-### 4. Rodar em desenvolvimento
+### Iniciar
 
 ```bash
 npm run dev
@@ -164,28 +113,36 @@ npm run dev
 
 Acesse `http://localhost:3000`.
 
-> **Windows + OneDrive:** o `.next` é gerado em `%TEMP%\legislativo-next-build` para evitar conflito de bloqueio de arquivo do OneDrive (configurado em `next.config.ts`).
+> **Windows + OneDrive:** o build é gerado em `%TEMP%\legislativo-next-build` para evitar conflito de bloqueio de arquivo (configurado em `next.config.ts`).
+
+---
 
 ## Scripts
 
 ```bash
-npm run dev    # Servidor de desenvolvimento com Turbopack
-npm run build  # Build de produção
-npm run start  # Inicia o servidor de produção
+npm run dev    # desenvolvimento (Turbopack)
+npm run build  # build de produção
+npm run start  # servidor de produção
 npm run lint   # ESLint
 ```
 
+---
+
 ## Deploy
 
-Deploy recomendado na **Vercel**. Adicione as variáveis de ambiente do `.env.local` no painel da Vercel e conecte o repositório.
+Conecte o repositório na **Vercel** e adicione as variáveis do `.env.local` nas configurações do projeto. O deploy é automático a cada push na `main`.
 
 ```bash
 npx vercel --prod
 ```
 
-## Autenticação
+---
 
-- Email/senha e Google OAuth via Supabase Auth
-- Rotas protegidas: `/monitoramento`, `/favoritos` e endpoints `/api/temas`, `/api/favoritos`, `/api/buscas`
-- Redirecionamento automático para `/auth/login` via `proxy.ts`
-- Callback OAuth em `/auth/callback`
+## APIs utilizadas
+
+As chamadas nunca saem direto do browser — passam pelas API routes do Next.js que adicionam cache e resolvem CORS.
+
+- `https://dadosabertos.camara.leg.br/api/v2` — dados abertos da Câmara
+- `https://legis.senado.leg.br/dadosabertos` — dados abertos do Senado
+
+Cache: 30 min para listagens, 60 min para detalhes de proposições.

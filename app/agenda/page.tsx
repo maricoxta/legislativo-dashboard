@@ -1,15 +1,9 @@
 import { EventoCamara } from '@/types/camara'
-import { formatDate } from '@/lib/utils'
 
 export default async function AgendaPage() {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const today = new Date().toISOString().slice(0, 10)
   const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
-  const qs = new URLSearchParams({ dataInicio: today, dataFim: endDate, itens: '60', ordem: 'ASC', ordenarPor: 'dataHoraInicio' })
-  const res = await fetch(`${base}/api/camara/proposicoes?${qs}`, { cache: 'no-store' })
-
-  // Agenda usa endpoint próprio da Câmara
   let eventos: EventoCamara[] = []
   try {
     const evRes = await fetch(

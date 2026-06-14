@@ -11,10 +11,9 @@ export const metadata: Metadata = {
 }
 
 async function getUser() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (!supabaseUrl || supabaseUrl === 'your-project-url') return null
   try {
     const supabase = await createClient()
+    if (!supabase) return null
     const { data: { user } } = await supabase.auth.getUser()
     return user
   } catch { return null }

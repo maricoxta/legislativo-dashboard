@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
   const supabase = await createClient()
+  if (!supabase) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
@@ -19,6 +20,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
+  if (!supabase) return NextResponse.json({ ok: false })
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ ok: false })
 

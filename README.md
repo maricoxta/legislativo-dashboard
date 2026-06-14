@@ -111,7 +111,7 @@ create policy "own rows" on historico_buscas   using (user_id = auth.uid());
 npm run dev
 ```
 
-Acesse `http://localhost:3000`.
+Acesse 'https://legislativo-dashboard.vercel.app/'.
 
 > **Windows + OneDrive:** o build é gerado em `%TEMP%\legislativo-next-build` para evitar conflito de bloqueio de arquivo (configurado em `next.config.ts`).
 

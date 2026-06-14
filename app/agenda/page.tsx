@@ -2,7 +2,9 @@ import { EventoCamara } from '@/types/camara'
 
 export default async function AgendaPage() {
   const today = new Date().toISOString().slice(0, 10)
-  const endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const future = new Date(today)
+  future.setDate(future.getDate() + 30)
+  const endDate = future.toISOString().slice(0, 10)
 
   let eventos: EventoCamara[] = []
   try {

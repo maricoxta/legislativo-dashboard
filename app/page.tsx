@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { BillCard } from '@/components/proposicoes/BillCard'
 import { SenadoCard } from '@/components/proposicoes/SenadoCard'
@@ -88,7 +89,7 @@ export default async function DashboardPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-gray-700">Últimas Proposições – Câmara</h3>
-          <a href="/proposicoes/camara/PL" className="text-xs text-blue-600 hover:underline font-medium">Ver todas →</a>
+          <Link href="/proposicoes/camara/PL" className="text-xs text-blue-600 hover:underline font-medium">Ver todas →</Link>
         </div>
         <div className="space-y-2">
           {bills.slice(0, 10).map(b => <BillCard key={b.id} bill={b} />)}
@@ -100,7 +101,7 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-700">Últimas Matérias – Senado Federal</h3>
-            <a href="/proposicoes/senado/PL" className="text-xs text-purple-600 hover:underline font-medium">Ver todas →</a>
+            <Link href="/proposicoes/senado/PL" className="text-xs text-purple-600 hover:underline font-medium">Ver todas →</Link>
           </div>
           <div className="space-y-2">
             {senadoData.slice(0, 6).map(m => <SenadoCard key={m.Codigo} materia={m} />)}

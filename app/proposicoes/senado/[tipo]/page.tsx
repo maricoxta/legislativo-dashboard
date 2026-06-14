@@ -1,6 +1,7 @@
 import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { MateriaSenado } from '@/types/senado'
 import { TIPO_SIGLAS } from '@/lib/config'
+import { getBaseUrl } from '@/lib/utils'
 
 interface Props {
   params: Promise<{ tipo: string }>
@@ -10,7 +11,7 @@ interface Props {
 export default async function SenadoListPage({ params, searchParams }: Props) {
   const { tipo } = await params
   const sp = await searchParams
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const base = getBaseUrl()
 
   const qs = new URLSearchParams({
     codigoTipoMateria: tipo,

@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export async function getCached<T>(key: string): Promise<T | null> {
   try {
     const supabase = createAdminClient()
+    if (!supabase) return null
     const { data } = await supabase
       .from('api_cache')
       .select('data')
@@ -18,6 +19,7 @@ export async function getCached<T>(key: string): Promise<T | null> {
 export async function setCache(key: string, data: unknown, ttlMinutes: number): Promise<void> {
   try {
     const supabase = createAdminClient()
+    if (!supabase) return
     const expires = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString()
     await supabase.from('api_cache').upsert({ cache_key: key, data, expires_at: expires })
   } catch {}

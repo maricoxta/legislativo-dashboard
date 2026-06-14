@@ -4,9 +4,10 @@ import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { DashboardCharts } from '@/components/dashboard/Charts'
 import { ProposicaoCamara } from '@/types/camara'
 import { MateriaSenado } from '@/types/senado'
+import { getBaseUrl } from '@/lib/utils'
 
 async function fetchDashboardData() {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const base = getBaseUrl()
   const year = new Date().getFullYear()
 
   const [camaraRes, senadoRes] = await Promise.allSettled([

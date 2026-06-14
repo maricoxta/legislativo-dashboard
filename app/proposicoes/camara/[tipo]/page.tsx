@@ -2,6 +2,7 @@ import { BillCard } from '@/components/proposicoes/BillCard'
 import { ProposicaoFilters } from '@/components/proposicoes/Filters'
 import { ProposicaoCamara } from '@/types/camara'
 import { CAMARA_TEMAS, TIPO_SIGLAS } from '@/lib/config'
+import { getBaseUrl } from '@/lib/utils'
 
 interface Props {
   params: Promise<{ tipo: string }>
@@ -11,7 +12,7 @@ interface Props {
 export default async function CamaraListPage({ params, searchParams }: Props) {
   const { tipo } = await params
   const sp = await searchParams
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const base = getBaseUrl()
 
   const isTema = !isNaN(Number(tipo))
   const qs = new URLSearchParams({

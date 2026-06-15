@@ -8,7 +8,7 @@ export async function proxy(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   // Sem Supabase configurado, libera tudo
-  if (!supabaseUrl || supabaseUrl === 'your-project-url') {
+  if (!supabaseUrl || !supabaseKey || supabaseUrl === 'your-project-url') {
     return NextResponse.next({ request })
   }
 

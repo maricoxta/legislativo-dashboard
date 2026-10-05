@@ -17,34 +17,34 @@ export default function EntendaPage() {
         </p>
       </div>
 
-      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">🚀 A viagem de uma proposta</h2>
-          <p className="text-sm text-slate-500">Escolha um tipo e siga o caminho passo a passo, ou aperte &quot;Ver tudo sozinho&quot;.</p>
+      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+        <div className="border-l-4 border-teal-500 pl-4">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-violet-700 tracking-tight">🚀 A viagem de uma proposta</h2>
+          <p className="text-base text-slate-500 mt-1">Escolha um tipo e siga o caminho passo a passo, ou aperte &quot;Ver tudo sozinho&quot;.</p>
         </div>
         <FluxoAprovacao />
       </section>
 
-      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">🧠 Mapa das ideias</h2>
-          <p className="text-sm text-slate-500">Clique em cada bolinha para descobrir quem pode propor, como propor e por onde começa.</p>
+      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+        <div className="border-l-4 border-teal-500 pl-4">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-violet-700 tracking-tight">🧠 Mapa das ideias</h2>
+          <p className="text-base text-slate-500 mt-1">Clique em cada bolinha para descobrir quem pode propor, como propor e por onde começa.</p>
         </div>
         <MapaMental />
       </section>
 
-      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">🗳️ Quantos votos precisa?</h2>
-          <p className="text-sm text-slate-500">Onde a proposta precisa ganhar e quantos &quot;sim&quot; ela precisa em cada Casa.</p>
+      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+        <div className="border-l-4 border-teal-500 pl-4">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-violet-700 tracking-tight">🗳️ Quantos votos precisa?</h2>
+          <p className="text-base text-slate-500 mt-1">Onde a proposta precisa ganhar e quantos &quot;sim&quot; ela precisa em cada Casa.</p>
         </div>
         <QuantosVotos />
       </section>
 
-      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">👩‍💼 Quem são e o que fazem?</h2>
-          <p className="text-sm text-slate-500">Clique em uma pergunta para ver o que cada parlamentar faz e quais poderes tem.</p>
+      <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+        <div className="border-l-4 border-teal-500 pl-4">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-violet-700 tracking-tight">👩‍💼 Quem são e o que fazem?</h2>
+          <p className="text-base text-slate-500 mt-1">Clique em uma pergunta para ver o que cada parlamentar faz e quais poderes tem.</p>
         </div>
         <Parlamentares />
       </section>

@@ -60,3 +60,39 @@ export async function listarProcessosSenado(f: FiltroSenado): Promise<ProcessoSe
   await setCache(cacheKey, processos, 30)
   return processos
 }
+
+// Todos os processos de um tipo apresentados no ano. /processo não pagina:
+// percorremos o ano em janelas de 7 dias e dividimos ao meio a janela que
+// vier com 100 itens ou mais (possível teto da API).
+const DIA = 864e5
+const isoT = (t: number) => new Date(t).toISOString().slice(0, 10)
+const CACHE_ANO = { headers: { Accept: 'application/json' }, next: { revalidate: 3600 } }
+
+async function processosNaJanela(sigla: string, inicio: number, fim: number): Promise<ProcessoSenado[]> {
+  const qs = new URLSearchParams({ sigla, dataInicioApresentacao: isoT(inicio), dataFimApresentacao: isoT(fim) })
+  const res = await fetch(`${SENADO_API}/processo?${qs}`, CACHE_ANO)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const lote = await res.json()
+  const itens: ProcessoSenado[] = Array.isArray(lote) ? lote : []
+  if (itens.length >= 100 && fim > inicio) {
+    const meio = inicio + Math.floor((fim - inicio) / DIA / 2) * DIA
+    const [a, b] = await Promise.all([processosNaJanela(sigla, inicio, meio), processosNaJanela(sigla, meio + DIA, fim)])
+    return [...a, ...b]
+  }
+  return itens
+}
+
+export async function processosDoAno(sigla: string, ano: number): Promise<ProcessoSenado[]> {
+  const inicioAno = Date.UTC(ano, 0, 1)
+  const fimAno = Math.min(Date.UTC(ano, 11, 31), Date.now())
+  const janelas: [number, number][] = []
+  for (let t = inicioAno; t <= fimAno; t += 7 * DIA) janelas.push([t, Math.min(t + 6 * DIA, fimAno)])
+
+  // No máximo 5 requisições simultâneas (a API recusa mais de 10 por segundo).
+  const vistos = new Map<number, ProcessoSenado>()
+  for (let i = 0; i < janelas.length; i += 5) {
+    const lotes = await Promise.all(janelas.slice(i, i + 5).map(([a, b]) => processosNaJanela(sigla, a, b)))
+    for (const p of lotes.flat()) vistos.set(p.id, p)
+  }
+  return [...vistos.values()].sort((a, b) => (b.dataApresentacao ?? '').localeCompare(a.dataApresentacao ?? ''))
+}

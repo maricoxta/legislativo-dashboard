@@ -6,7 +6,7 @@ import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { DashboardCharts } from '@/components/dashboard/Charts'
 import { listarProposicoesCamara } from '@/lib/server/camara'
 import { listarProcessosSenado } from '@/lib/server/senado'
-import { indicadoresDoAno, IndicadoresCasa } from '@/lib/server/indicadores'
+import { indicadoresDoAno, IndicadoresCasa, INDICADORES_VAZIOS } from '@/lib/server/indicadores'
 
 // Chama as funções de dados direto, sem passar por HTTP: buscar a própria
 // API pela URL do deploy falha quando a Vercel protege essa URL.
@@ -23,8 +23,7 @@ async function fetchDashboardData() {
   const bills = camaraRes.status === 'fulfilled' ? (camaraRes.value.dados ?? []) : []
   const senadoData = senadoRes.status === 'fulfilled' ? senadoRes.value : []
 
-  const vazio: IndicadoresCasa = { total: null, tramitando: null, aprovadosOuLei: null }
-  const kpis = indicadores.status === 'fulfilled' ? indicadores.value : { camara: vazio, senado: vazio }
+  const kpis = indicadores.status === 'fulfilled' ? indicadores.value : { camara: INDICADORES_VAZIOS, senado: INDICADORES_VAZIOS }
 
   return { bills, senadoData, year, kpis }
 }
@@ -33,14 +32,18 @@ const fmt = (n: number | null) => (n === null ? '—' : n.toLocaleString('pt-BR'
 const pct = (n: number | null, total: number | null) =>
   n === null || !total ? undefined : `${Math.round((n / total) * 100)}% do total`
 
-function KpisCasa({ casa, year, k, cor }: { casa: string; year: number; k: IndicadoresCasa; cor: 'blue' | 'purple' }) {
+function KpisCasa({ casa, fonte, year, k, cor }: { casa: string; fonte: 'camara' | 'senado'; year: number; k: IndicadoresCasa; cor: 'blue' | 'purple' }) {
+  const lista = (status?: string) =>
+    `/proposicoes/${fonte}/PL?${new URLSearchParams({ ano: String(year), ...(status ? { status } : {}) })}`
   return (
     <div>
       <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">{casa}</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label={`PLs de ${year}`} value={fmt(k.total)} emoji="📋" sub="apresentados no ano" color={cor} />
-        <StatCard label="Em tramitação" value={fmt(k.tramitando)} emoji="⏳" sub={pct(k.tramitando, k.total)} color="amber" />
-        <StatCard label="Aprovados ou viraram lei" value={fmt(k.aprovadosOuLei)} emoji="✅" sub={pct(k.aprovadosOuLei, k.total)} color="green" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <StatCard label={`PLs de ${year}`} value={fmt(k.total)} emoji="📋" sub="apresentados no ano" color={cor} href={lista()} />
+        <StatCard label="Em tramitação" value={fmt(k.tramitando)} emoji="⏳" sub={pct(k.tramitando, k.total)} color="amber" href={lista('tramitando')} />
+        <StatCard label="Aprovados ou viraram lei" value={fmt(k.aprovados)} emoji="✅" sub={pct(k.aprovados, k.total)} color="green" href={lista('aprovados')} />
+        <StatCard label="Vetados" value={fmt(k.vetados)} emoji="🚫" sub={pct(k.vetados, k.total)} color="red" href={lista('vetados')} />
+        <StatCard label="Não aprovados" value={fmt(k['nao-aprovados'])} emoji="🗄️" sub={pct(k['nao-aprovados'], k.total) ?? 'arquivados, rejeitados ou retirados'} color="gray" href={lista('nao-aprovados')} />
       </div>
     </div>
   )
@@ -68,8 +71,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* KPIs por Casa */}
-      <KpisCasa casa="Câmara dos Deputados" year={year} k={kpis.camara} cor="blue" />
-      <KpisCasa casa="Senado Federal" year={year} k={kpis.senado} cor="purple" />
+      <KpisCasa casa="Câmara dos Deputados" fonte="camara" year={year} k={kpis.camara} cor="blue" />
+      <KpisCasa casa="Senado Federal" fonte="senado" year={year} k={kpis.senado} cor="purple" />
 
       {/* Gráficos */}
       <DashboardCharts statusMap={statusMap} bills={bills} />

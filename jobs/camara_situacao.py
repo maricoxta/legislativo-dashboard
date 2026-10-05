@@ -115,8 +115,12 @@ def upsert(registros: list[dict]):
         sys.exit(f"Supabase respondeu {e.code}: {e.read()[:500]!r}")
 
 
+ANOS_PADRAO = 12
+
+
 def main():
-    anos = [int(a) for a in sys.argv[1:]] or [date.today().year, date.today().year - 1]
+    # PLs antigos também viram lei; 12 anos cobrem quase todas as leis do ano.
+    anos = [int(a) for a in sys.argv[1:]] or [date.today().year - i for i in range(ANOS_PADRAO)]
     for ano in anos:
         registros = [r for r in pls_do_ano(ano) if r["id"] is not None]
         if not registros:

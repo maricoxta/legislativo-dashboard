@@ -5,7 +5,7 @@ export type StatusPL = 'tramitando' | 'aprovados' | 'vetados' | 'nao-aprovados'
 
 export const STATUS_PL: Record<StatusPL, { titulo: string; descricao: string }> = {
   tramitando: { titulo: 'Em tramitação', descricao: 'ainda sem decisão final' },
-  aprovados: { titulo: 'Aprovados ou viraram lei', descricao: 'transformados em lei ou aprovados aguardando a outra Casa, sanção ou promulgação' },
+  aprovados: { titulo: 'Aprovados até agora', descricao: 'apresentados no ano e que já viraram lei ou foram aprovados e aguardam a outra Casa, sanção ou promulgação' },
   vetados: { titulo: 'Vetados', descricao: 'vetados totalmente pela Presidência da República' },
   'nao-aprovados': { titulo: 'Não aprovados', descricao: 'arquivados, rejeitados, retirados pelo autor, prejudicados ou que perderam a eficácia' },
 }

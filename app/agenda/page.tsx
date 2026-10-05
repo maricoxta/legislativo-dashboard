@@ -1,4 +1,6 @@
-import { EventoCamara } from '@/types/camara'
+import { agendaLegislativa, EventoAgenda } from '@/lib/server/agenda'
+
+export const revalidate = 600
 
 export default async function AgendaPage() {
   const today = new Date().toISOString().slice(0, 10)
@@ -6,18 +8,11 @@ export default async function AgendaPage() {
   future.setDate(future.getDate() + 30)
   const endDate = future.toISOString().slice(0, 10)
 
-  let eventos: EventoCamara[] = []
-  try {
-    const evRes = await fetch(
-      `https://dadosabertos.camara.leg.br/api/v2/eventos?dataInicio=${today}&dataFim=${endDate}&itens=60&ordem=ASC&ordenarPor=dataHoraInicio`,
-      { headers: { Accept: 'application/json' }, next: { revalidate: 600 } }
-    )
-    if (evRes.ok) { const d = await evRes.json(); eventos = d.dados ?? [] }
-  } catch {}
+  const eventos = await agendaLegislativa(today, endDate)
 
-  const grouped: Record<string, EventoCamara[]> = {}
+  const grouped: Record<string, EventoAgenda[]> = {}
   eventos.forEach(e => {
-    const d = (e.dataHoraInicio ?? '').slice(0, 10) || 'sem-data'
+    const d = e.data
     if (!grouped[d]) grouped[d] = []
     grouped[d].push(e)
   })
@@ -26,7 +21,7 @@ export default async function AgendaPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900">Agenda Legislativa</h1>
-        <p className="text-sm text-gray-500">Câmara dos Deputados — próximos 30 dias</p>
+        <p className="text-sm text-gray-500">Câmara dos Deputados e Senado Federal — próximos 30 dias</p>
       </div>
 
       {Object.keys(grouped).length === 0 && (
@@ -45,28 +40,27 @@ export default async function AgendaPage() {
               </div>
               <div className="flex-1 space-y-2">
                 {grouped[date].map((e, i) => {
-                  const tipo = e.descricaoTipo ?? 'Evento'
+                  const tipo = e.tipo
                   const isA = tipo.toLowerCase().includes('audiência')
                   const isR = tipo.toLowerCase().includes('reunião')
                   const badgeCls = isA ? 'bg-blue-50 text-blue-600' : isR ? 'bg-purple-50 text-purple-600' : 'bg-gray-100 text-gray-600'
-                  const orgaos = (e.orgaos ?? []).map(o => o.sigla ?? o.apelido).filter(Boolean).join(', ')
-                  const dt = e.dataHoraInicio ? new Date(e.dataHoraInicio) : null
-                  const hora = dt ? dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
+                  const casaCls = e.casa === 'camara' ? 'bg-green-50 text-green-700' : 'bg-indigo-50 text-indigo-700'
                   return (
                     <div key={i} className="bg-white rounded-xl border border-gray-100 p-3 flex items-start gap-3 hover:shadow-sm transition-shadow">
                       <div className="shrink-0 w-12 text-center">
-                        {hora ? <><p className="text-xs font-bold text-gray-700">{hora}</p><p className="text-xs text-gray-400">h</p></> : <p className="text-xs text-gray-400">—</p>}
+                        {e.hora ? <><p className="text-xs font-bold text-gray-700">{e.hora}</p><p className="text-xs text-gray-400">h</p></> : <p className="text-xs text-gray-400">—</p>}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${casaCls}`}>{e.casa === 'camara' ? 'Câmara' : 'Senado'}</span>
                           <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${badgeCls}`}>{tipo}</span>
-                          {orgaos && <span className="text-xs text-gray-400">{orgaos}</span>}
+                          {e.orgao && <span className="text-xs text-gray-400">{e.orgao}</span>}
                         </div>
-                        <p className="text-sm text-gray-800 leading-snug">{e.descricao ?? '—'}</p>
-                        {e.localCamara?.nome && <p className="text-xs text-gray-400 mt-0.5">📍 {e.localCamara.nome}</p>}
+                        <p className="text-sm text-gray-800 leading-snug">{e.descricao || '—'}</p>
+                        {e.local && <p className="text-xs text-gray-400 mt-0.5">📍 {e.local}</p>}
                       </div>
-                      {e.urlRegistro && (
-                        <a href={e.urlRegistro} target="_blank" className="text-xs text-blue-600 hover:underline shrink-0">Ver</a>
+                      {e.url && (
+                        <a href={e.url} target="_blank" className="text-xs text-blue-600 hover:underline shrink-0">Ver</a>
                       )}
                     </div>
                   )

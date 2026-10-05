@@ -1,13 +1,13 @@
 import { getStatusClass, getUrgencyClass } from '@/lib/config'
 
 const CLASS_MAP: Record<string, string> = {
-  'status-tramitando': 'bg-blue-100 text-blue-700',
-  'status-aprovado':   'bg-green-100 text-green-700',
-  'status-lei':        'bg-green-900 text-green-300',
-  'status-arquivado':  'bg-gray-100 text-gray-500',
+  'status-tramitando': 'bg-indigo-100 text-indigo-700',
+  'status-aprovado':   'bg-emerald-100 text-emerald-700',
+  'status-lei':        'bg-emerald-900 text-emerald-300',
+  'status-arquivado':  'bg-slate-100 text-slate-500',
   'status-vetado':     'bg-amber-100 text-amber-700',
-  'status-prejudicado':'bg-red-100 text-red-700',
-  'urgency-urgente':   'bg-red-100 text-red-700',
+  'status-prejudicado':'bg-rose-100 text-rose-700',
+  'urgency-urgente':   'bg-rose-100 text-rose-700',
   'urgency-prioridade':'bg-violet-100 text-violet-700',
 }
 

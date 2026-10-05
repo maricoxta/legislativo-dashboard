@@ -60,12 +60,12 @@ export default async function CamaraListPage({ params, searchParams }: Props) {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-        <p className="text-sm text-gray-500">Câmara dos Deputados{sp.ano ? ` · apresentados em ${sp.ano}` : ''}</p>
+        <h1 className="text-xl font-bold text-slate-900">{title}</h1>
+        <p className="text-sm text-slate-500">Câmara dos Deputados{sp.ano ? ` · apresentados em ${sp.ano}` : ''}</p>
         {status && (
-          <p className="text-sm text-gray-700 mt-1">
+          <p className="text-sm text-slate-700 mt-1">
             <strong>{STATUS_PL[status].titulo}</strong>: {STATUS_PL[status].descricao}.{' '}
-            <a href={`?${new URLSearchParams({ ano: sp.ano ?? '' })}`} className="text-blue-600 hover:underline">Ver todos</a>
+            <a href={`?${new URLSearchParams({ ano: sp.ano ?? '' })}`} className="text-indigo-600 hover:underline">Ver todos</a>
           </p>
         )}
       </div>
@@ -73,15 +73,15 @@ export default async function CamaraListPage({ params, searchParams }: Props) {
       <ProposicaoFilters source="camara" tipo={isTema ? undefined : tipo} codTema={isTema ? tipo : undefined} />
 
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500"><strong className="text-gray-800">{(status ? totalStatus : bills.length).toLocaleString('pt-BR')}</strong> proposições · pág. {page}/{totalPages}</p>
+        <p className="text-sm text-slate-500"><strong className="text-slate-800">{(status ? totalStatus : bills.length).toLocaleString('pt-BR')}</strong> proposições · pág. {page}/{totalPages}</p>
         <div className="flex gap-2">
           {page > 1 && (
             <a href={`?${new URLSearchParams({ ...sp, pagina: String(page - 1) })}`}
-              className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50">← Anterior</a>
+              className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50">← Anterior</a>
           )}
           {page < totalPages && (
             <a href={`?${new URLSearchParams({ ...sp, pagina: String(page + 1) })}`}
-              className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50">Próxima →</a>
+              className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50">Próxima →</a>
           )}
         </div>
       </div>
@@ -89,7 +89,7 @@ export default async function CamaraListPage({ params, searchParams }: Props) {
       <div className="space-y-3">
         {bills.length
           ? bills.map(b => <BillCard key={b.id} bill={b} />)
-          : <p className="text-center text-gray-400 py-12 text-sm">{erro ? 'A API da Câmara não respondeu. Tente de novo em instantes.' : 'Nenhuma proposição encontrada.'}</p>}
+          : <p className="text-center text-slate-400 py-12 text-sm">{erro ? 'A API da Câmara não respondeu. Tente de novo em instantes.' : 'Nenhuma proposição encontrada.'}</p>}
       </div>
     </div>
   )

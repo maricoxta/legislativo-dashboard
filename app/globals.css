@@ -1,8 +1,54 @@
 @import "tailwindcss";
 
+/* Paleta do site ("Lovable Blues": #37629c, #b4eaea, #8da1e7, #238d9c, #1f49a1).
+   As escalas do Tailwind são trocadas aqui, então toda classe indigo-*,
+   violet-* e teal-* do site já usa estas cores:
+   indigo = azul aço (botões e links), teal = Câmara, violet = azul royal (Senado). */
+@theme {
+  --color-indigo-50: #eff3fa;
+  --color-indigo-100: #dce5f4;
+  --color-indigo-200: #b9cbe9;
+  --color-indigo-300: #8da1e7;
+  --color-indigo-400: #6a8bc9;
+  --color-indigo-500: #4a72b0;
+  --color-indigo-600: #37629c;
+  --color-indigo-700: #2c4f80;
+  --color-indigo-800: #233f66;
+  --color-indigo-900: #1b304e;
+  --color-indigo-950: #111f33;
+  --color-violet-50: #eef2fb;
+  --color-violet-100: #dbe3f6;
+  --color-violet-200: #b7c7ed;
+  --color-violet-300: #8da1e7;
+  --color-violet-400: #5d7bcf;
+  --color-violet-500: #3a5fbb;
+  --color-violet-600: #1f49a1;
+  --color-violet-700: #1a3d87;
+  --color-violet-800: #16326e;
+  --color-violet-900: #122856;
+  --color-violet-950: #0c1b3b;
+  --color-teal-50: #effafa;
+  --color-teal-100: #daf4f4;
+  --color-teal-200: #b4eaea;
+  --color-teal-300: #84d6d9;
+  --color-teal-400: #4fb8c0;
+  --color-teal-500: #2fa0ad;
+  --color-teal-600: #238d9c;
+  --color-teal-700: #1e7380;
+  --color-teal-800: #1c5d68;
+  --color-teal-900: #1a4d56;
+  --color-teal-950: #0f3239;
+}
+
 :root {
-  --background: #f9fafb;
-  --foreground: #111827;
+  --background: #f8fafc; /* slate-50 */
+  --foreground: #0f172a; /* slate-900 */
+}
+
+/* Tudo no site é medido em rem, então 90% aqui deixa a página inteira
+   do tamanho que ela tinha com o zoom do navegador em 90%. */
+html {
+  font-size: 90%;
 }
 
 body {
@@ -23,8 +69,8 @@ body {
   to { stroke-dashoffset: -16; }
 }
 @keyframes pulsar {
-  0%, 100% { box-shadow: 0 0 0 0 rgb(99 102 241 / 0.35); }
-  50% { box-shadow: 0 0 0 10px rgb(99 102 241 / 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgb(55 98 156 / 0.35); }
+  50% { box-shadow: 0 0 0 10px rgb(55 98 156 / 0); }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

@@ -1,77 +1,99 @@
 'use client'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { ProposicaoCamara } from '@/types/camara'
-import { CAMARA_TEMAS } from '@/lib/config'
+import { Bar, BarChart, CartesianGrid, LabelList, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import type { IndicadoresCasa } from '@/lib/server/indicadores'
+import { CASA_HEX, STATUS_GRAFICO } from './paleta'
 
-const PALETTE = ['#3b82f6','#8b5cf6','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16']
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const fmt = (n: number) => n.toLocaleString('pt-BR')
+const EIXO = { fontSize: 11, fill: '#64748b' }
+// Texto da legenda em cinza; a bolinha ao lado é que leva a cor da Casa.
+const legenda = (v: string) => <span style={{ color: '#475569' }}>{v}</span>
 
 interface Props {
-  statusMap: Record<string, number>
-  bills: ProposicaoCamara[]
+  ano: number
+  mesesVisiveis: number // no ano corrente, só até o mês atual
+  kpis: { camara: IndicadoresCasa; senado: IndicadoresCasa }
+  porMes: { camara: number[] | null; senado: number[] | null }
 }
 
-export function DashboardCharts({ statusMap, bills }: Props) {
-  const statusData = Object.entries(statusMap).map(([name, value]) => ({ name, value }))
+function Cartao({ titulo, sub, children }: { titulo: string; sub: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+      <h3 className="text-sm font-semibold text-slate-700">{titulo}</h3>
+      <p className="text-xs text-slate-400 mb-4">{sub}</p>
+      {children}
+    </div>
+  )
+}
 
-  const monthMap: Record<string, number> = {}
-  bills.forEach(b => {
-    if (!b.dataApresentacao) return
-    const m = new Date(b.dataApresentacao).toLocaleDateString('pt-BR', { month: 'short' })
-    monthMap[m] = (monthMap[m] ?? 0) + 1
+const SemDados = () => <p className="h-[240px] flex items-center justify-center text-sm text-slate-400">Sem dados para este ano.</p>
+
+export function DashboardCharts({ ano, mesesVisiveis, kpis, porMes }: Props) {
+  // Situação: % dos PLs do ano em cada situação, lado a lado por Casa.
+  // As situações não somam 100% (um PL aprovado no Senado pode seguir
+  // tramitando na Câmara), por isso não é um gráfico empilhado.
+  const casas = (['camara', 'senado'] as const).filter(c => kpis[c].total)
+  const situacao = STATUS_GRAFICO.map(s => {
+    const linha: Record<string, string | number> = { situacao: s.nome }
+    for (const c of casas) {
+      const k = kpis[c]
+      linha[c] = Math.round(((k[s.id] ?? 0) / k.total!) * 1000) / 10
+      linha[`${c}_n`] = k[s.id] ?? 0
+    }
+    return linha
   })
-  const trendData = Object.entries(monthMap).map(([mes, total]) => ({ mes, total }))
 
-  const temaData = CAMARA_TEMAS.slice(0, 6).map((t, i) => ({
-    name: t.nome,
-    value: Math.max(1, Math.floor(bills.length / 6) + (i % 3)),
+  const temMes = porMes.camara || porMes.senado
+  const mensal = MESES.slice(0, mesesVisiveis).map((mes, i) => ({
+    mes,
+    camara: porMes.camara?.[i] ?? null,
+    senado: porMes.senado?.[i] ?? null,
   }))
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Proposições por Tema</h3>
-        <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
-            <Pie data={temaData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-              {temaData.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
-            </Pie>
-            <Tooltip formatter={(v) => [Number(v), 'PLs']} />
-            <Legend iconSize={10} wrapperStyle={{ fontSize: 10 }} />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <Cartao titulo={`Situação dos PLs de ${ano}`} sub="Porcentagem dos PLs apresentados no ano em cada situação">
+        {casas.length ? (
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={situacao} layout="vertical" margin={{ left: 0, right: 40 }} barGap={2} barCategoryGap="22%">
+              <CartesianGrid horizontal={false} stroke="#e2e8f0" />
+              <XAxis type="number" domain={[0, 100]} unit="%" tick={EIXO} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="situacao" tick={EIXO} width={150} axisLine={false} tickLine={false} />
+              <Tooltip
+                cursor={{ fill: '#f1f5f9' }}
+                formatter={(v, nome, item) => {
+                  const c = nome === 'Câmara' ? 'camara' : 'senado'
+                  const n = Number((item.payload as Record<string, number>)[`${c}_n`])
+                  return [`${fmt(n)} PLs (${String(v).replace('.', ',')}%)`, nome]
+                }}
+              />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} formatter={legenda} />
+              {casas.map(c => (
+                <Bar key={c} dataKey={c} name={c === 'camara' ? 'Câmara' : 'Senado'} fill={CASA_HEX[c]} radius={[0, 4, 4, 0]}>
+                  <LabelList dataKey={c} position="right" fill="#475569" fontSize={11}
+                    formatter={(v) => `${String(v).replace('.', ',')}%`} />
+                </Bar>
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        ) : <SemDados />}
+      </Cartao>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Distribuição por Situação</h3>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={statusData} layout="vertical" margin={{ left: 8 }}>
-            <XAxis type="number" tick={{ fontSize: 10 }} />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
-            <Tooltip />
-            <Bar dataKey="value" radius={4}>
-              {statusData.map((entry, i) => {
-                const color = entry.name.includes('Lei') || entry.name.includes('Aprovad') ? '#22c55e'
-                  : entry.name.includes('Arquivad') ? '#9ca3af'
-                  : entry.name.includes('Vetad') ? '#f59e0b'
-                  : '#3b82f6'
-                return <Cell key={i} fill={color} />
-              })}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">PLs por Mês</h3>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={trendData}>
-            <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip />
-            <Bar dataKey="total" fill="#3b82f6" radius={4} name="PLs" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <Cartao titulo={`PLs apresentados por mês em ${ano}`} sub="Quantos projetos de lei cada Casa recebeu em cada mês">
+        {temMes ? (
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={mensal} barGap={2} margin={{ left: -8, right: 8 }}>
+              <CartesianGrid vertical={false} stroke="#e2e8f0" />
+              <XAxis dataKey="mes" tick={EIXO} axisLine={false} tickLine={false} />
+              <YAxis tick={EIXO} axisLine={false} tickLine={false} />
+              <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v, nome) => [`${fmt(Number(v))} PLs`, nome]} />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} formatter={legenda} />
+              {porMes.camara && <Bar dataKey="camara" name="Câmara" fill={CASA_HEX.camara} radius={[4, 4, 0, 0]} />}
+              {porMes.senado && <Bar dataKey="senado" name="Senado" fill={CASA_HEX.senado} radius={[4, 4, 0, 0]} />}
+            </BarChart>
+          </ResponsiveContainer>
+        ) : <SemDados />}
+      </Cartao>
     </div>
   )
 }

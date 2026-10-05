@@ -1,8 +1,7 @@
 import { BillCard } from '@/components/proposicoes/BillCard'
 import { ProposicaoFilters } from '@/components/proposicoes/Filters'
-import { ProposicaoCamara } from '@/types/camara'
+import { listarProposicoesCamara, ListaCamara } from '@/lib/server/camara'
 import { CAMARA_TEMAS, TIPO_SIGLAS } from '@/lib/config'
-import { getBaseUrl } from '@/lib/utils'
 
 interface Props {
   params: Promise<{ tipo: string }>
@@ -12,8 +11,6 @@ interface Props {
 export default async function CamaraListPage({ params, searchParams }: Props) {
   const { tipo } = await params
   const sp = await searchParams
-  const base = getBaseUrl()
-
   const isTema = !isNaN(Number(tipo))
   const qs = new URLSearchParams({
     itens: '20',
@@ -25,8 +22,8 @@ export default async function CamaraListPage({ params, searchParams }: Props) {
     ...(sp.pagina ? { pagina: sp.pagina } : {}),
   })
 
-  const res = await fetch(`${base}/api/camara/proposicoes?${qs}`, { cache: 'no-store' })
-  const data: { dados: ProposicaoCamara[]; links?: { rel: string; href: string }[] } = res.ok ? await res.json() : { dados: [] }
+  let data: ListaCamara = { dados: [] }
+  try { data = await listarProposicoesCamara(qs) } catch {}
   const bills = data.dados ?? []
 
   const lastLink = data.links?.find(l => l.rel === 'last')

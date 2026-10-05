@@ -1,7 +1,7 @@
 import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { ProcessoSenado } from '@/types/senado'
 import { TIPO_SIGLAS } from '@/lib/config'
-import { getBaseUrl } from '@/lib/utils'
+import { listarProcessosSenado } from '@/lib/server/senado'
 
 interface Props {
   params: Promise<{ tipo: string }>
@@ -11,16 +11,10 @@ interface Props {
 export default async function SenadoListPage({ params, searchParams }: Props) {
   const { tipo } = await params
   const sp = await searchParams
-  const base = getBaseUrl()
-
-  const qs = new URLSearchParams({
-    sigla: tipo,
-    ano: sp.ano ?? String(new Date().getFullYear()),
-    limite: '20',
-  })
-
-  const res = await fetch(`${base}/api/senado/processos?${qs}`, { cache: 'no-store' })
-  const processos: ProcessoSenado[] = res.ok ? await res.json() : []
+  let processos: ProcessoSenado[] = []
+  try {
+    processos = await listarProcessosSenado({ sigla: tipo, ano: Number(sp.ano) || undefined, limite: 20 })
+  } catch {}
 
   return (
     <div className="space-y-4">

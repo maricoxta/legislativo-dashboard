@@ -1,27 +1,27 @@
 import Link from 'next/link'
+import { connection } from 'next/server'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { BillCard } from '@/components/proposicoes/BillCard'
 import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { DashboardCharts } from '@/components/dashboard/Charts'
-import { ProposicaoCamara } from '@/types/camara'
-import { ProcessoSenado } from '@/types/senado'
-import { getBaseUrl } from '@/lib/utils'
+import { listarProposicoesCamara } from '@/lib/server/camara'
+import { listarProcessosSenado } from '@/lib/server/senado'
 
+// Chama as funções de dados direto, sem passar por HTTP: buscar a própria
+// API pela URL do deploy falha quando a Vercel protege essa URL.
 async function fetchDashboardData() {
-  const base = getBaseUrl()
+  await connection() // renderiza a cada request, como o antigo cache: 'no-store'
   const year = new Date().getFullYear()
 
   const [camaraRes, senadoRes] = await Promise.allSettled([
-    fetch(`${base}/api/camara/proposicoes?siglaTipo=PL&ano=${year}&itens=30&ordem=DESC&ordenarPor=dataApresentacao`, { cache: 'no-store' }),
-    fetch(`${base}/api/senado/processos?sigla=PL&ano=${year}&limite=10`, { cache: 'no-store' }),
+    listarProposicoesCamara(new URLSearchParams({ siglaTipo: 'PL', ano: String(year), itens: '30', ordem: 'DESC', ordenarPor: 'dataApresentacao' })),
+    listarProcessosSenado({ sigla: 'PL', ano: year, limite: 10 }),
   ])
 
-  const camara: { dados: ProposicaoCamara[] } =
-    camaraRes.status === 'fulfilled' && camaraRes.value.ok ? await camaraRes.value.json() : { dados: [] }
-  const senado: ProcessoSenado[] =
-    senadoRes.status === 'fulfilled' && senadoRes.value.ok ? await senadoRes.value.json() : []
+  const bills = camaraRes.status === 'fulfilled' ? (camaraRes.value.dados ?? []) : []
+  const senadoData = senadoRes.status === 'fulfilled' ? senadoRes.value : []
 
-  return { bills: camara.dados ?? [], senadoData: senado, year }
+  return { bills, senadoData, year }
 }
 
 function categorize(sit?: string) {

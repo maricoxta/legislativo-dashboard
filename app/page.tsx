@@ -6,6 +6,7 @@ import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { DashboardCharts } from '@/components/dashboard/Charts'
 import { listarProposicoesCamara } from '@/lib/server/camara'
 import { listarProcessosSenado } from '@/lib/server/senado'
+import { indicadoresDoAno, IndicadoresCasa } from '@/lib/server/indicadores'
 
 // Chama as funções de dados direto, sem passar por HTTP: buscar a própria
 // API pela URL do deploy falha quando a Vercel protege essa URL.
@@ -13,15 +14,36 @@ async function fetchDashboardData() {
   await connection() // renderiza a cada request, como o antigo cache: 'no-store'
   const year = new Date().getFullYear()
 
-  const [camaraRes, senadoRes] = await Promise.allSettled([
+  const [camaraRes, senadoRes, indicadores] = await Promise.allSettled([
     listarProposicoesCamara(new URLSearchParams({ siglaTipo: 'PL', ano: String(year), itens: '30', ordem: 'DESC', ordenarPor: 'dataApresentacao' })),
     listarProcessosSenado({ sigla: 'PL', ano: year, limite: 10 }),
+    indicadoresDoAno(year),
   ])
 
   const bills = camaraRes.status === 'fulfilled' ? (camaraRes.value.dados ?? []) : []
   const senadoData = senadoRes.status === 'fulfilled' ? senadoRes.value : []
 
-  return { bills, senadoData, year }
+  const vazio: IndicadoresCasa = { total: null, tramitando: null, aprovadosOuLei: null }
+  const kpis = indicadores.status === 'fulfilled' ? indicadores.value : { camara: vazio, senado: vazio }
+
+  return { bills, senadoData, year, kpis }
+}
+
+const fmt = (n: number | null) => (n === null ? '—' : n.toLocaleString('pt-BR'))
+const pct = (n: number | null, total: number | null) =>
+  n === null || !total ? undefined : `${Math.round((n / total) * 100)}% do total`
+
+function KpisCasa({ casa, year, k, cor }: { casa: string; year: number; k: IndicadoresCasa; cor: 'blue' | 'purple' }) {
+  return (
+    <div>
+      <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">{casa}</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label={`PLs de ${year}`} value={fmt(k.total)} emoji="📋" sub="apresentados no ano" color={cor} />
+        <StatCard label="Em tramitação" value={fmt(k.tramitando)} emoji="⏳" sub={pct(k.tramitando, k.total)} color="amber" />
+        <StatCard label="Aprovados ou viraram lei" value={fmt(k.aprovadosOuLei)} emoji="✅" sub={pct(k.aprovadosOuLei, k.total)} color="green" />
+      </div>
+    </div>
+  )
 }
 
 function categorize(sit?: string) {
@@ -35,7 +57,7 @@ function categorize(sit?: string) {
 }
 
 export default async function DashboardPage() {
-  const { bills, senadoData, year } = await fetchDashboardData()
+  const { bills, senadoData, year, kpis } = await fetchDashboardData()
 
   const statusMap: Record<string, number> = {}
   bills.forEach(b => {
@@ -43,19 +65,11 @@ export default async function DashboardPage() {
     statusMap[k] = (statusMap[k] ?? 0) + 1
   })
 
-  const tramitando = statusMap['Em tramitação'] ?? 0
-  const aprovados = (statusMap['Aprovado'] ?? 0) + (statusMap['Convertido em Lei'] ?? 0)
-
   return (
     <div className="space-y-6">
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label={`PLs em ${year}`} value={bills.length} emoji="📋" sub="Câmara dos Deputados" color="blue" />
-        <StatCard label="Em Tramitação" value={tramitando} emoji="⏳"
-          sub={`${bills.length ? Math.round(tramitando / bills.length * 100) : 0}% do total`} color="amber" />
-        <StatCard label="Aprovados/Lei" value={aprovados} emoji="✅" sub="incl. convertidos em lei" color="green" />
-        <StatCard label="Senado – PLs" value={senadoData.length} emoji="🏛️" sub={String(year)} color="purple" />
-      </div>
+      {/* KPIs por Casa */}
+      <KpisCasa casa="Câmara dos Deputados" year={year} k={kpis.camara} cor="blue" />
+      <KpisCasa casa="Senado Federal" year={year} k={kpis.senado} cor="purple" />
 
       {/* Gráficos */}
       <DashboardCharts statusMap={statusMap} bills={bills} />

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { ProposicaoDetalhe } from '@/types/camara'
-import { MateriaDetalhadaSenado, TramitacaoSenado, RelatorSenado, ComissaoSenado, VotacaoSenado, TextoSenado } from '@/types/senado'
+import { DetalheSenado } from '@/types/senado'
 import { StatusBadge, UrgencyBadge } from '@/components/ui/StatusBadge'
 import { JourneyBar } from '@/components/detalhe/JourneyBar'
 import { TimelineCamara, TimelineSenado } from '@/components/detalhe/Timeline'
@@ -115,51 +115,48 @@ function CamaraDetail({ id }: { id: number }) {
   )
 }
 
-function SenadoDetail({ codigo }: { codigo: string }) {
-  const [data, setData] = useState<{
-    materia: MateriaDetalhadaSenado | null
-    tramitacao: TramitacaoSenado[]
-    comissoes: ComissaoSenado[]
-    relatorias: RelatorSenado[]
-    votacoes: VotacaoSenado[]
-    textos: TextoSenado[]
-  } | null>(null)
+function SenadoDetail({ id }: { id: string }) {
+  const [data, setData] = useState<DetalheSenado | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetch(`/api/senado/${codigo}`)
+    fetch(`/api/senado/${id}`)
       .then(r => r.json())
       .then(setData)
       .catch(e => setError(e.message))
-  }, [codigo])
+  }, [id])
 
   if (error) return <p className="text-sm text-gray-400 text-center py-8">Erro: {error}</p>
   if (!data) return <div className="space-y-4 p-1">{[...Array(5)].map((_, i) => <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />)}</div>
-  if (!data.materia) return <p className="text-sm text-gray-400 text-center py-8">Matéria não encontrada.</p>
+  if (!data.processo) return <p className="text-sm text-gray-400 text-center py-8">Processo não encontrado.</p>
 
-  const m = data.materia
-  const id2 = m.IdentificacaoMateria ?? {}
-  const sit = m.SituacaoAtual?.DescricaoSituacao
-  const history = data.tramitacao.map(t => t.DescricaoSituacao ?? '').join(' ')
+  const p = data.processo
+  const sit = data.situacaoAtual ?? undefined
+  const history = [p.objetivo === 'Revisora' ? 'casa revisora' : '', ...data.tramitacao.map(t => t.descricao ?? '')].join(' ')
+  const autores = (p.autoriaIniciativa ?? []).map(a => a.autor ?? a.ente).filter(Boolean).join(', ')
+  const ultima = data.tramitacao[0]
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
         <StatusBadge situacao={sit} />
-        <UrgencyBadge regime={m.Regime?.DescricaoRegime} />
+        {p.objetivo && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">📍 Casa {p.objetivo.toLowerCase()}</span>}
       </div>
 
       <div className="bg-purple-50 rounded-xl p-4">
         <p className="text-xs font-semibold text-purple-600 mb-2">EMENTA</p>
-        <p className="text-sm text-gray-800 leading-relaxed">{m.EmentaMateria ?? '—'}</p>
-        {m.ExplicacaoEmentaMateria && <p className="text-xs text-gray-500 mt-2">{m.ExplicacaoEmentaMateria}</p>}
+        <p className="text-sm text-gray-800 leading-relaxed">{p.conteudo?.ementa ?? '—'}</p>
       </div>
 
       <JourneyBar situacao={sit} history={history} />
 
       <div className="grid grid-cols-2 gap-3">
-        <MetaItem label="Apresentação" value={formatDate(m.DataApresentacao)} />
-        <MetaItem label="Tipo" value={id2.DescricaoTipoMateria ?? id2.SiglaTipoMateria} />
+        <MetaItem label="Apresentação" value={formatDate(p.documento?.dataApresentacao)} />
+        <MetaItem label="Tipo" value={p.descricaoSigla ?? p.documento?.tipo ?? p.sigla} />
+        <MetaItem label="Autoria" value={autores || p.documento?.resumoAutoria} />
+        <MetaItem label="Órgão atual" value={ultima?.colegiado?.sigla} />
+        <MetaItem label="Deliberação" value={p.deliberacao?.tipoDeliberacao} />
+        <MetaItem label="Norma gerada" value={p.normaGerada?.descricao} />
       </div>
 
       {!!data.relatorias.length && (
@@ -170,9 +167,12 @@ function SenadoDetail({ codigo }: { codigo: string }) {
               <div key={i} className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-lg p-3">
                 <span className="text-lg">👤</span>
                 <div>
-                  <p className="text-sm font-medium">{r.DescricaoRelator ?? r.NomeRelator ?? '—'}</p>
-                  <p className="text-xs text-gray-500">{r.SiglaComissaoRelatoria} · {formatDate(r.DataDesignacaoRelator)}</p>
-                  {r.DescricaoVotacaoRelatorio && <p className="text-xs text-gray-400">Parecer: {r.DescricaoVotacaoRelatorio}</p>}
+                  <p className="text-sm font-medium">
+                    {r.nomeParlamentar ?? '—'}
+                    {r.siglaPartidoParlamentar && <span className="text-gray-400 font-normal"> ({r.siglaPartidoParlamentar}{r.ufParlamentar ? `–${r.ufParlamentar}` : ''})</span>}
+                  </p>
+                  <p className="text-xs text-gray-500">{r.descricaoTipoRelator ?? 'Relator'} · {r.siglaColegiado} · {formatDate(r.dataDesignacao?.replace(' ', 'T'))}</p>
+                  {r.descricaoTipoEncerramento && <p className="text-xs text-gray-400">Encerramento: {r.descricaoTipoEncerramento}</p>}
                 </div>
               </div>
             ))}
@@ -192,11 +192,11 @@ function SenadoDetail({ codigo }: { codigo: string }) {
           <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Votações</h4>
           <div className="space-y-2">
             {data.votacoes.map((v, i) => {
-              const ok = (v.DescricaoResultado ?? '').toLowerCase().includes('aprovad')
+              const ok = v.resultadoVotacao === 'A'
               return (
-                <div key={i} className="bg-gray-50 border border-gray-100 rounded-lg p-3 flex items-center justify-between">
-                  <span className="text-xs text-gray-600">{formatDate(v.DataSessaoVotacao)}</span>
-                  <span className={`text-xs font-bold ${ok ? 'text-green-600' : 'text-red-500'}`}>{v.DescricaoResultado ?? '—'}</span>
+                <div key={i} className="bg-gray-50 border border-gray-100 rounded-lg p-3 flex items-center justify-between gap-3">
+                  <span className="text-xs text-gray-600">{formatDate(v.dataSessao)} · {truncate(v.descricaoVotacao ?? '', 90)}</span>
+                  <span className={`text-xs font-bold shrink-0 ${ok ? 'text-green-600' : 'text-red-500'}`}>{ok ? 'Aprovada' : (v.resultadoVotacao ?? '—')}</span>
                 </div>
               )
             })}
@@ -204,14 +204,10 @@ function SenadoDetail({ codigo }: { codigo: string }) {
         </div>
       )}
 
-      {!!data.textos.filter(t => t.UrlTexto).length && (
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
-          {data.textos.filter(t => t.UrlTexto).map((t, i) => (
-            <a key={i} href={t.UrlTexto} target="_blank" className="text-xs text-blue-600 hover:underline">📄 {t.DescricaoTipoTexto ?? 'Texto'}</a>
-          ))}
-          <a href={`https://www25.senado.leg.br/web/atividade/materias/-/materia/${codigo}`} target="_blank" className="text-xs text-purple-600 hover:underline">🔗 Ver no Senado</a>
-        </div>
-      )}
+      <div className="flex flex-wrap gap-3 pt-2 border-t border-gray-100">
+        {p.documento?.url && <a href={p.documento.url} target="_blank" className="text-xs text-blue-600 hover:underline">📄 {p.documento.tipo ?? 'Texto inicial'}</a>}
+        {p.codigoMateria && <a href={`https://www25.senado.leg.br/web/atividade/materias/-/materia/${p.codigoMateria}`} target="_blank" className="text-xs text-purple-600 hover:underline">🔗 Ver no Senado</a>}
+      </div>
     </div>
   )
 }
@@ -232,7 +228,7 @@ export function Drawer({ state, onClose }: Props) {
 
   const title = state.source === 'camara'
     ? `Proposição #${state.id} – Câmara`
-    : `Matéria #${state.id} – Senado`
+    : `Processo #${state.id} – Senado`
 
   return (
     <div className="fixed inset-0 z-40">
@@ -249,7 +245,7 @@ export function Drawer({ state, onClose }: Props) {
         <div className="flex-1 p-6">
           {state.source === 'camara'
             ? <CamaraDetail id={Number(state.id)} />
-            : <SenadoDetail codigo={String(state.id)} />}
+            : <SenadoDetail id={String(state.id)} />}
         </div>
       </div>
     </div>

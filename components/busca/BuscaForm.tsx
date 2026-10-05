@@ -4,7 +4,7 @@ import { BillCard } from '@/components/proposicoes/BillCard'
 import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { CardSkeleton } from '@/components/ui/Skeleton'
 import { ProposicaoCamara } from '@/types/camara'
-import { MateriaSenado } from '@/types/senado'
+import { ProcessoSenado } from '@/types/senado'
 import { TIPO_SIGLAS, CAMARA_TEMAS, PARTIDOS_BR, UF_LIST } from '@/lib/config'
 import { useRouter } from 'next/navigation'
 
@@ -26,7 +26,7 @@ export function BuscaForm({ initialParams }: Props) {
   const [useCamara, setUseCamara] = useState(true)
   const [useSenado, setUseSenado] = useState(false)
 
-  const [results, setResults] = useState<{ camara: ProposicaoCamara[]; senado: MateriaSenado[] } | null>(null)
+  const [results, setResults] = useState<{ camara: ProposicaoCamara[]; senado: ProcessoSenado[] } | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -48,28 +48,21 @@ export function BuscaForm({ initialParams }: Props) {
       if (partido) camaraQs.set('siglaPartidoAutor', partido)
       if (uf) camaraQs.set('siglaUfAutor', uf)
 
-      const senadoQs = new URLSearchParams({ qtdItens: '10' })
+      const senadoQs = new URLSearchParams({ limite: '10' })
+      if (q) senadoQs.set('termo', q)
       if (ano) senadoQs.set('ano', ano)
-      if (tipo) senadoQs.set('codigoTipoMateria', tipo)
+      if (tipo) senadoQs.set('sigla', tipo)
+      if (numero) senadoQs.set('numero', numero)
 
       const [cr, sr] = await Promise.allSettled([
         useCamara ? fetch(`/api/camara/proposicoes?${camaraQs}`).then(r => r.json()) : Promise.resolve({ dados: [] }),
-        useSenado ? fetch(`/api/senado/materias?${senadoQs}`).then(r => r.json()) : Promise.resolve([]),
+        useSenado ? fetch(`/api/senado/processos?${senadoQs}`).then(r => r.json()) : Promise.resolve([]),
       ])
 
       const camara: ProposicaoCamara[] = cr.status === 'fulfilled' ? (cr.value?.dados ?? []) : []
-      const senado: MateriaSenado[] = sr.status === 'fulfilled' ? (Array.isArray(sr.value) ? sr.value : []) : []
+      const senado: ProcessoSenado[] = sr.status === 'fulfilled' ? (Array.isArray(sr.value) ? sr.value : []) : []
 
       setResults({ camara, senado })
-
-      // Salva histórico (silencioso, ignora falha)
-      if (q) {
-        fetch('/api/buscas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ termo: q, filtros: { tipo, ano, partido, uf }, resultado_count: camara.length + senado.length }),
-        }).catch(() => {})
-      }
     } finally {
       setLoading(false)
     }
@@ -190,7 +183,7 @@ export function BuscaForm({ initialParams }: Props) {
             : (
               <div className="space-y-3">
                 {results.camara.map(b => <BillCard key={b.id} bill={b} />)}
-                {results.senado.map(m => <SenadoCard key={m.Codigo} materia={m} />)}
+                {results.senado.map(p => <SenadoCard key={p.id} processo={p} />)}
               </div>
             )}
         </div>

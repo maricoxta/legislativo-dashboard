@@ -56,7 +56,9 @@ export default async function AgendaPage() {
                           <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${badgeCls}`}>{tipo}</span>
                           {e.orgao && <span className="text-xs text-gray-400">{e.orgao}</span>}
                         </div>
-                        <p className="text-sm text-gray-800 leading-snug">{e.descricao || '—'}</p>
+                        {e.url
+                          ? <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-800 leading-snug hover:text-blue-600 hover:underline">{e.descricao || e.tipo}</a>
+                          : <p className="text-sm text-gray-800 leading-snug">{e.descricao || '—'}</p>}
                         {e.local && <p className="text-xs text-gray-400 mt-0.5">📍 {e.local}</p>}
                         {(e.finalidade || e.observacoes || e.requerimentos) && (
                           <dl className="mt-2 space-y-1.5 text-xs text-gray-600">
@@ -76,7 +78,7 @@ export default async function AgendaPage() {
                         )}
                       </div>
                       {e.url && (
-                        <a href={e.url} target="_blank" className="text-xs text-blue-600 hover:underline shrink-0">Ver</a>
+                        <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline shrink-0">Ver no site ↗</a>
                       )}
                     </div>
                   )

@@ -43,7 +43,8 @@ async function agendaCamara(inicio: string, fim: string): Promise<EventoAgenda[]
     orgao: (e.orgaos ?? []).map(o => o.sigla ?? o.apelido).filter(Boolean).join(', '),
     descricao: e.descricao ?? '',
     local: e.localCamara?.nome ?? '',
-    url: e.urlRegistro,
+    // Página pública do evento; urlRegistro é só o vídeo e costuma vir vazio.
+    url: e.id ? `https://www.camara.leg.br/evento-legislativo/${e.id}` : e.urlRegistro,
   }))
 }
 
@@ -142,6 +143,9 @@ async function agendaPlenarioSenado(inicio: string, fim: string): Promise<Evento
       orgao: s.Casa === 'CN' ? 'Congresso' : 'Plenário',
       descricao: [(s.TipoSessao ?? '').trim(), s.SituacaoSessao && s.SituacaoSessao !== 'Agendada' ? `(${s.SituacaoSessao})` : ''].filter(Boolean).join(' '),
       local: s.LocalSessao ?? '',
+      url: s.CodigoSessao
+        ? `https://www25.senado.leg.br/web/atividade/sessao-plenaria/-/pauta/${s.CodigoSessao}`
+        : 'https://www25.senado.leg.br/web/atividade/plenario/agenda',
     }) satisfies EventoAgenda)
 }
 

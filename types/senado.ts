@@ -16,6 +16,8 @@ export interface ProcessoSenado {
   objetivo?: string // "Iniciadora" | "Revisora"
   tipoDocumento?: string
   urlDocumento?: string
+  normaGerada?: string // ex.: "Lei nº 15.172 de 22/07/2025"
+  siglaTipoDeliberacao?: string // ex.: "APROVADA_NO_PLENARIO"
 }
 
 export interface ColegiadoSenado {

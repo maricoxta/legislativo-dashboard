@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV = [
-  { href: '/', label: 'Dashboard', icon: <rect x="3" y="3" width="7" height="7"/>, icon2: <><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></> },
+  { href: '/', label: 'Entenda o Processo' },
+  { href: '/dashboard', label: 'Dashboard', icon: <rect x="3" y="3" width="7" height="7"/>, icon2: <><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></> },
   { href: '/busca', label: 'Busca Avançada' },
   { href: '/monitoramento', label: 'Monitoramento por Temas' },
   { href: '/agenda', label: 'Agenda Legislativa' },

@@ -9,3 +9,23 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Animações da página "Entenda o processo legislativo" */
+@keyframes aparecer {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes flutuar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes fluir {
+  to { stroke-dashoffset: -16; }
+}
+@keyframes pulsar {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(99 102 241 / 0.35); }
+  50% { box-shadow: 0 0 0 10px rgb(99 102 241 / 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

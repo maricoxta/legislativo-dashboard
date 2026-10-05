@@ -1,5 +1,5 @@
 import { getCached, setCache } from '@/lib/cache'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createAdminClient, supabaseUrl } from '@/lib/supabase/admin'
 import { CAMARA_API } from '@/lib/config'
 import { ProposicaoCamara } from '@/types/camara'
 
@@ -128,9 +128,9 @@ export async function porMesCamara(ano: number): Promise<number[]> {
 // Motivo, em texto, de a tabela da Câmara não responder (null = está ok).
 // Aparece no dashboard para facilitar achar erro de configuração.
 export async function diagnosticoCamara(ano: number): Promise<string | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const url = supabaseUrl()
   const chave = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url) return 'a variável NEXT_PUBLIC_SUPABASE_URL não existe neste ambiente da Vercel'
+  if (!url) return 'a variável SUPABASE_URL não existe neste ambiente da Vercel'
   if (!chave) return 'a variável SUPABASE_SERVICE_ROLE_KEY não existe neste ambiente da Vercel'
   try {
     const n = await contarSituacaoCamara({ ano })

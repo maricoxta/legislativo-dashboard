@@ -52,3 +52,28 @@ export async function DELETE(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
+
+// Atualiza as palavras-chave de um tema do próprio usuário.
+export async function PATCH(req: NextRequest) {
+  const supabase = await createClient()
+  if (!supabase) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+  const { id, keywords } = await req.json()
+  if (!Array.isArray(keywords) || !keywords.length) {
+    return NextResponse.json({ error: 'O tema precisa de pelo menos uma palavra-chave' }, { status: 400 })
+  }
+  const limpas = [...new Set(keywords.map((k: unknown) => String(k).trim()).filter(Boolean))]
+
+  const { data, error } = await supabase
+    .from('temas_monitorados')
+    .update({ keywords: limpas })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}

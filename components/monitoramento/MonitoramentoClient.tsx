@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BillCard } from '@/components/proposicoes/BillCard'
 import { CardSkeleton } from '@/components/ui/Skeleton'
 import { ProposicaoCamara } from '@/types/camara'
@@ -25,24 +25,95 @@ const COR_MAP: Record<string, string> = {
   purple: 'bg-purple-50 text-purple-700 border-purple-200 ring-purple-500',
 }
 
+interface Resultado {
+  bill: ProposicaoCamara
+  palavras: string[] // palavras-chave do tema que encontraram a proposição
+}
+
+// Os temas CNM são fixos no código; as palavras que o usuário muda neles
+// ficam neste navegador. Temas personalizados são salvos no Supabase.
+const CHAVE_LOCAL = 'monitoramento:palavras-cnm'
+
+function lerPalavrasLocais(): Record<string, string[]> {
+  try { return JSON.parse(localStorage.getItem(CHAVE_LOCAL) ?? '{}') } catch { return {} }
+}
+
+function salvarPalavrasLocais(v: Record<string, string[]>) {
+  try { localStorage.setItem(CHAVE_LOCAL, JSON.stringify(v)) } catch {}
+}
+
 export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) {
   const [customTemas, setCustomTemas] = useState<Tema[]>(initialTemas)
-  const [ativo, setAtivo] = useState<Tema | null>(CNM_TEMAS[0])
-  const [bills, setBills] = useState<ProposicaoCamara[]>([])
+  const [palavrasCnm, setPalavrasCnm] = useState<Record<string, string[]>>({})
+  const [ativoId, setAtivoId] = useState<string>(CNM_TEMAS[0].id)
+  const [resultados, setResultados] = useState<Resultado[]>([])
   const [loading, setLoading] = useState(false)
+  const [novaPalavra, setNovaPalavra] = useState('')
+  const [aviso, setAviso] = useState('')
 
-  const allTemas = [...CNM_TEMAS, ...customTemas]
+  const cnm = CNM_TEMAS.map(t => ({ ...t, keywords: palavrasCnm[t.id] ?? t.keywords }))
+  const allTemas = [...cnm, ...customTemas]
+  const ativo = allTemas.find(t => t.id === ativoId) ?? null
+  const isCnm = (id: string) => CNM_TEMAS.some(c => c.id === id)
 
-  async function loadTema(tema: Tema) {
-    setAtivo(tema)
+  useEffect(() => { setPalavrasCnm(lerPalavrasLocais()) }, [])
+
+  // Busca de novo sempre que o tema ativo ou as palavras dele mudam.
+  const chaveBusca = ativo ? `${ativo.id}|${ativo.keywords.join('|')}` : ''
+  useEffect(() => {
+    if (!ativo) return
+    let cancelado = false
     setLoading(true)
-    try {
-      const res = await fetch(`/api/camara/proposicoes?keywords=${encodeURIComponent(tema.keywords[0])}&itens=10`)
-      const data = await res.json()
-      setBills(data.dados ?? [])
-    } finally {
-      setLoading(false)
+    const qs = new URLSearchParams(ativo.keywords.map(k => ['kw', k]))
+    fetch(`/api/monitoramento?${qs}`)
+      .then(r => r.json())
+      .then(d => { if (!cancelado) setResultados(d.dados ?? []) })
+      .catch(() => { if (!cancelado) setResultados([]) })
+      .finally(() => { if (!cancelado) setLoading(false) })
+    return () => { cancelado = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaveBusca])
+
+  async function salvarPalavras(tema: Tema, keywords: string[]) {
+    setAviso('')
+    if (!keywords.length) { setAviso('O tema precisa de pelo menos uma palavra-chave.'); return }
+    if (isCnm(tema.id)) {
+      const novo = { ...palavrasCnm, [tema.id]: keywords }
+      setPalavrasCnm(novo)
+      salvarPalavrasLocais(novo)
+      return
     }
+    const anterior = tema.keywords
+    setCustomTemas(prev => prev.map(t => (t.id === tema.id ? { ...t, keywords } : t)))
+    const res = await fetch('/api/temas', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: tema.id, keywords }),
+    })
+    if (!res.ok) {
+      setCustomTemas(prev => prev.map(t => (t.id === tema.id ? { ...t, keywords: anterior } : t)))
+      setAviso('Não foi possível salvar. Faça login para editar seus temas.')
+    }
+  }
+
+  function incluirPalavra() {
+    if (!ativo) return
+    const novas = novaPalavra.split(',').map(k => k.trim()).filter(Boolean)
+    const keywords = [...new Set([...ativo.keywords, ...novas])]
+    setNovaPalavra('')
+    if (keywords.length !== ativo.keywords.length) salvarPalavras(ativo, keywords)
+  }
+
+  function excluirPalavra(k: string) {
+    if (ativo) salvarPalavras(ativo, ativo.keywords.filter(x => x !== k))
+  }
+
+  function restaurarPadrao() {
+    if (!ativo) return
+    const { [ativo.id]: _removido, ...resto } = palavrasCnm
+    void _removido
+    setPalavrasCnm(resto)
+    salvarPalavrasLocais(resto)
   }
 
   async function addTema() {
@@ -69,7 +140,7 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
     if (!confirm('Remover este tema monitorado?')) return
     await fetch('/api/temas', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setCustomTemas(prev => prev.filter(t => t.id !== id))
-    if (ativo?.id === id) setAtivo(CNM_TEMAS[0])
+    if (ativoId === id) setAtivoId(CNM_TEMAS[0].id)
   }
 
   return (
@@ -88,10 +159,10 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {allTemas.map(t => {
           const cls = COR_MAP[t.cor] ?? COR_MAP.blue
-          const isCustom = !CNM_TEMAS.find(c => c.id === t.id)
-          const isAtivo = ativo?.id === t.id
+          const isCustom = !isCnm(t.id)
+          const isAtivo = ativoId === t.id
           return (
-            <div key={t.id} onClick={() => loadTema(t)}
+            <div key={t.id} onClick={() => setAtivoId(t.id)}
               className={`bg-white rounded-xl border cursor-pointer hover:shadow-md transition-all p-4 ${isAtivo ? `ring-2 ${cls.split(' ').find(c => c.startsWith('ring-'))}` : 'border-gray-100 shadow-sm'}`}>
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -119,16 +190,57 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
         })}
       </div>
 
-      {ativo && (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">{ativo.emoji} {ativo.nome} — Últimas Proposições</h3>
-          {loading
-            ? <div className="space-y-3">{[...Array(3)].map((_, i) => <CardSkeleton key={i} />)}</div>
-            : bills.length
-              ? <div className="space-y-2">{bills.map(b => <BillCard key={b.id} bill={b} />)}</div>
-              : <p className="text-sm text-gray-400 text-center py-8">Nenhuma proposição encontrada para &quot;{ativo.keywords[0]}&quot;.</p>}
-        </div>
-      )}
+      {ativo && (() => {
+        const cls = COR_MAP[ativo.cor] ?? COR_MAP.blue
+        const chip = cls.split(' ').slice(0, 3).join(' ')
+        const editado = isCnm(ativo.id) && palavrasCnm[ativo.id] !== undefined
+        return (
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700">{ativo.emoji} {ativo.nome}: palavras-chave do filtro</h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Mostramos as proposições da Câmara apresentadas nos últimos 12 meses que contêm qualquer uma destas palavras.
+                {isCnm(ativo.id) && ' Mudanças nos temas CNM ficam salvas neste navegador.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              {ativo.keywords.map(k => (
+                <span key={k} className={`text-xs pl-2.5 pr-1 py-1 rounded-full border flex items-center gap-1 ${chip}`}>
+                  {k}
+                  <button onClick={() => excluirPalavra(k)} aria-label={`Excluir ${k}`}
+                    className="w-4 h-4 rounded-full hover:bg-white/80 leading-none">×</button>
+                </span>
+              ))}
+              <form onSubmit={e => { e.preventDefault(); incluirPalavra() }} className="flex gap-1">
+                <input value={novaPalavra} onChange={e => setNovaPalavra(e.target.value)}
+                  placeholder="Incluir palavra-chave"
+                  className="text-xs border border-gray-200 rounded-full px-3 py-1 w-44 focus:outline-none focus:ring-2 focus:ring-blue-200" />
+                <button type="submit" className="text-xs px-3 py-1 rounded-full bg-blue-600 text-white hover:bg-blue-700">Incluir</button>
+              </form>
+              {editado && (
+                <button onClick={restaurarPadrao} className="text-xs text-gray-400 hover:text-gray-600 underline">Restaurar padrão</button>
+              )}
+            </div>
+            {aviso && <p className="text-xs text-red-500">{aviso}</p>}
+
+            <div className="border-t border-gray-100 pt-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                Últimas proposições {!loading && <span className="font-normal text-gray-400">({resultados.length})</span>}
+              </h4>
+              {loading
+                ? <div className="space-y-3">{[...Array(3)].map((_, i) => <CardSkeleton key={i} />)}</div>
+                : resultados.length
+                  ? <div className="space-y-2">{resultados.map(r => (
+                      <div key={r.bill.id}>
+                        <p className="text-xs text-gray-400 mb-1">Encontrada por: {r.palavras.join(', ')}</p>
+                        <BillCard bill={r.bill} />
+                      </div>
+                    ))}</div>
+                  : <p className="text-sm text-gray-400 text-center py-8">Nenhuma proposição dos últimos 12 meses com estas palavras-chave.</p>}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

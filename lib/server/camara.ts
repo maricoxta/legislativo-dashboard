@@ -124,3 +124,18 @@ export async function porMesCamara(ano: number): Promise<number[]> {
     }),
   )
 }
+
+// Motivo, em texto, de a tabela da Câmara não responder (null = está ok).
+// Aparece no dashboard para facilitar achar erro de configuração.
+export async function diagnosticoCamara(ano: number): Promise<string | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const chave = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url) return 'a variável NEXT_PUBLIC_SUPABASE_URL não existe neste ambiente da Vercel'
+  if (!chave) return 'a variável SUPABASE_SERVICE_ROLE_KEY não existe neste ambiente da Vercel'
+  try {
+    const n = await contarSituacaoCamara({ ano })
+    return n ? null : `a tabela camara_pl_situacao não tem PLs de ${ano}`
+  } catch (e) {
+    return `o Supabase respondeu: ${e instanceof Error ? e.message : String(e)}`
+  }
+}

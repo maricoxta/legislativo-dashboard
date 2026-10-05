@@ -4,7 +4,7 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { BillCard } from '@/components/proposicoes/BillCard'
 import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { DashboardCharts } from '@/components/dashboard/Charts'
-import { listarSituacaoCamara } from '@/lib/server/camara'
+import { diagnosticoCamara, listarSituacaoCamara } from '@/lib/server/camara'
 import { processosDoAno } from '@/lib/server/senado'
 import { indicadoresDoAno, IndicadoresCasa, INDICADORES_VAZIOS, porMesDoAno } from '@/lib/server/indicadores'
 
@@ -20,11 +20,12 @@ function anosDisponiveis() {
 async function fetchDashboardData(year: number) {
   await connection() // renderiza a cada request, como o antigo cache: 'no-store'
 
-  const [camaraRes, senadoRes, indicadores, meses] = await Promise.allSettled([
+  const [camaraRes, senadoRes, indicadores, meses, diag] = await Promise.allSettled([
     listarSituacaoCamara({ ano: year }, 1, 10),
     processosDoAno('PL', year),
     indicadoresDoAno(year),
     porMesDoAno(year),
+    diagnosticoCamara(year),
   ])
 
   const bills = camaraRes.status === 'fulfilled' ? camaraRes.value.dados : []
@@ -32,7 +33,9 @@ async function fetchDashboardData(year: number) {
   const kpis = indicadores.status === 'fulfilled' ? indicadores.value : { camara: INDICADORES_VAZIOS, senado: INDICADORES_VAZIOS }
   const porMes = meses.status === 'fulfilled' ? meses.value : { camara: null, senado: null }
 
-  return { bills, senadoData, kpis, porMes }
+  const avisoCamara = diag.status === 'fulfilled' ? diag.value : 'erro inesperado ao consultar a tabela'
+
+  return { bills, senadoData, kpis, porMes, avisoCamara }
 }
 
 const fmt = (n: number | null) => (n === null ? '—' : n.toLocaleString('pt-BR'))
@@ -75,7 +78,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const atual = new Date().getFullYear()
   const pedido = parseInt(sp.ano ?? '')
   const year = anosDisponiveis().includes(pedido) ? pedido : atual
-  const { bills, senadoData, kpis, porMes } = await fetchDashboardData(year)
+  const { bills, senadoData, kpis, porMes, avisoCamara } = await fetchDashboardData(year)
   const mesesVisiveis = year === atual ? new Date().getMonth() + 1 : 12
 
   return (
@@ -90,6 +93,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       {/* KPIs por Casa */}
       <KpisCasa casa="Câmara dos Deputados" fonte="camara" year={year} k={kpis.camara} cor="teal" />
+      {avisoCamara && (
+        <p className="-mt-3 text-xs text-slate-500">⚠️ Dados da Câmara indisponíveis: {avisoCamara}.</p>
+      )}
       <KpisCasa casa="Senado Federal" fonte="senado" year={year} k={kpis.senado} cor="violet" />
 
       {/* Gráficos */}

@@ -4,7 +4,7 @@ import { BillCard } from '@/components/proposicoes/BillCard'
 import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { DashboardCharts } from '@/components/dashboard/Charts'
 import { ProposicaoCamara } from '@/types/camara'
-import { MateriaSenado } from '@/types/senado'
+import { ProcessoSenado } from '@/types/senado'
 import { getBaseUrl } from '@/lib/utils'
 
 async function fetchDashboardData() {
@@ -13,12 +13,12 @@ async function fetchDashboardData() {
 
   const [camaraRes, senadoRes] = await Promise.allSettled([
     fetch(`${base}/api/camara/proposicoes?siglaTipo=PL&ano=${year}&itens=30&ordem=DESC&ordenarPor=dataApresentacao`, { cache: 'no-store' }),
-    fetch(`${base}/api/senado/materias?codigoTipoMateria=PL&ano=${year}&qtdItens=10`, { cache: 'no-store' }),
+    fetch(`${base}/api/senado/processos?sigla=PL&ano=${year}&limite=10`, { cache: 'no-store' }),
   ])
 
   const camara: { dados: ProposicaoCamara[] } =
     camaraRes.status === 'fulfilled' && camaraRes.value.ok ? await camaraRes.value.json() : { dados: [] }
-  const senado: MateriaSenado[] =
+  const senado: ProcessoSenado[] =
     senadoRes.status === 'fulfilled' && senadoRes.value.ok ? await senadoRes.value.json() : []
 
   return { bills: camara.dados ?? [], senadoData: senado, year }
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
             <Link href="/proposicoes/senado/PL" className="text-xs text-purple-600 hover:underline font-medium">Ver todas →</Link>
           </div>
           <div className="space-y-2">
-            {senadoData.slice(0, 6).map(m => <SenadoCard key={m.Codigo} materia={m} />)}
+            {senadoData.slice(0, 6).map(p => <SenadoCard key={p.id} processo={p} />)}
           </div>
         </div>
       )}

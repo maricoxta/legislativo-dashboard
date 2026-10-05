@@ -1,5 +1,5 @@
 import { SenadoCard } from '@/components/proposicoes/SenadoCard'
-import { MateriaSenado } from '@/types/senado'
+import { ProcessoSenado } from '@/types/senado'
 import { TIPO_SIGLAS } from '@/lib/config'
 import { getBaseUrl } from '@/lib/utils'
 
@@ -14,13 +14,13 @@ export default async function SenadoListPage({ params, searchParams }: Props) {
   const base = getBaseUrl()
 
   const qs = new URLSearchParams({
-    codigoTipoMateria: tipo,
+    sigla: tipo,
     ano: sp.ano ?? String(new Date().getFullYear()),
-    qtdItens: '20',
+    limite: '20',
   })
 
-  const res = await fetch(`${base}/api/senado/materias?${qs}`, { cache: 'no-store' })
-  const materias: MateriaSenado[] = res.ok ? await res.json() : []
+  const res = await fetch(`${base}/api/senado/processos?${qs}`, { cache: 'no-store' })
+  const processos: ProcessoSenado[] = res.ok ? await res.json() : []
 
   return (
     <div className="space-y-4">
@@ -38,11 +38,11 @@ export default async function SenadoListPage({ params, searchParams }: Props) {
         ))}
       </div>
 
-      <p className="text-sm text-gray-500"><strong className="text-gray-800">{materias.length}</strong> matérias carregadas</p>
+      <p className="text-sm text-gray-500"><strong className="text-gray-800">{processos.length}</strong> processos carregados</p>
 
       <div className="space-y-3">
-        {materias.length
-          ? materias.map(m => <SenadoCard key={m.Codigo} materia={m} />)
+        {processos.length
+          ? processos.map(p => <SenadoCard key={p.id} processo={p} />)
           : <p className="text-center text-gray-400 py-12 text-sm">Nenhuma matéria encontrada.</p>}
       </div>
     </div>

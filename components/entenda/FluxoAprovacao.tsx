@@ -23,7 +23,6 @@ export function FluxoAprovacao() {
   const [fluxoId, setFluxoId] = useState<Fluxo['id']>('pl')
   const [passo, setPasso] = useState(0)
   const [tocando, setTocando] = useState(false)
-  const [curioso, setCurioso] = useState(false)
 
   const fluxo = FLUXOS.find(f => f.id === fluxoId)!
   const cor = CORES[fluxo.cor]
@@ -45,7 +44,6 @@ export function FluxoAprovacao() {
     setFluxoId(id)
     setPasso(0)
     setTocando(false)
-    setCurioso(false)
   }
 
   function irPara(n: number) {
@@ -107,9 +105,7 @@ export function FluxoAprovacao() {
               <h3 className={`text-xl font-extrabold ${cor.texto}`}>{etapa.titulo}</h3>
               <p className="text-base text-gray-800">{etapa.texto}</p>
               {etapa.curiosos && (
-                curioso
-                  ? <p className="text-sm text-gray-700 bg-white/80 rounded-xl p-3 border border-gray-100">🤓 {etapa.curiosos}</p>
-                  : <button onClick={() => setCurioso(true)} className={`text-sm font-medium ${cor.texto} hover:underline`}>🤓 Quero saber mais</button>
+                <p className="text-sm text-gray-700 bg-white/80 rounded-xl p-3 border border-gray-100">🤓 <strong>Para saber mais:</strong> {etapa.curiosos}</p>
               )}
             </div>
           </div>
@@ -139,10 +135,6 @@ export function FluxoAprovacao() {
           className="px-4 py-2 rounded-full text-sm border border-gray-200 bg-white hover:bg-gray-50">
           {tocando ? '⏸ Pausar' : '▶ Ver tudo sozinho'}
         </button>
-        <label className="ml-auto flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-          <input type="checkbox" checked={curioso} onChange={e => setCurioso(e.target.checked)} className="accent-indigo-600" />
-          Mostrar detalhes para curiosos
-        </label>
       </div>
     </div>
   )

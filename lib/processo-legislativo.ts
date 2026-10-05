@@ -52,7 +52,7 @@ export const CONCEITOS: Conceito[] = [
     como: [
       { icone: '✍️', titulo: 'Escrever o texto', texto: 'A ideia vira um texto dividido em artigos, com uma explicação do porquê (a justificativa).' },
       { icone: '📮', titulo: 'Entregar oficialmente', texto: 'O texto é protocolado e ganha um número, como "PL 1234/2026".' },
-      { icone: '🗳️', titulo: 'Ganhar a votação', texto: 'Precisa de mais votos "sim" do que "não" entre quem está presente (maioria simples).' },
+      { icone: '🗳️', titulo: 'Ganhar a votação nas duas Casas', texto: 'Primeiro em uma Casa (Câmara ou Senado) e depois na outra. Em cada uma, basta ter mais votos "sim" do que "não" entre quem está presente (maioria simples), desde que pelo menos metade da Casa esteja lá.' },
     ],
     ondeComeca: [
       { icone: '🟢', titulo: 'Na Câmara dos Deputados', texto: 'Quando quem propõe é deputado, o Presidente da República, um tribunal, o Procurador-Geral ou os cidadãos.' },
@@ -73,7 +73,7 @@ export const CONCEITOS: Conceito[] = [
     ],
     como: [
       { icone: '📌', titulo: 'Só para temas específicos', texto: 'A Constituição diz quais: por exemplo, regras gerais de impostos e de como o governo pode gastar.' },
-      { icone: '🗳️', titulo: 'Maioria absoluta', texto: 'Precisa de 257 deputados e 41 senadores votando "sim", não importa quantos estejam presentes.' },
+      { icone: '🗳️', titulo: 'Maioria absoluta nas duas Casas', texto: 'Precisa de 257 votos "sim" na Câmara e 41 no Senado, não importa quantos estejam presentes.' },
     ],
     ondeComeca: [
       { icone: '🔁', titulo: 'Mesmo caminho do PL', texto: 'Começa na Câmara ou no Senado seguindo as mesmas regras do PL.' },
@@ -119,6 +119,7 @@ export const CONCEITOS: Conceito[] = [
       { icone: '🚨', titulo: 'Precisa ser urgente e relevante', texto: 'A Constituição só permite MP para assuntos importantes que não podem esperar.' },
       { icone: '📰', titulo: 'Publicar no Diário Oficial', texto: 'A partir da publicação, já tem força de lei.' },
       { icone: '⏳', titulo: 'Tem prazo de validade', texto: 'Vale por 60 dias, que podem virar 120. Se o Congresso não aprovar nesse tempo, ela "caduca" e perde o efeito.' },
+      { icone: '🗳️', titulo: 'Câmara e Senado confirmam', texto: 'As duas Casas votam, cada uma por maioria simples, para a MP virar lei de vez.' },
     ],
     ondeComeca: [
       { icone: '🤝', titulo: 'No Congresso Nacional', texto: 'Primeiro uma comissão mista (deputados e senadores juntos), depois a Câmara e por último o Senado.' },
@@ -219,4 +220,152 @@ export const FLUXOS: Fluxo[] = [
       { emoji: '🗄️', titulo: 'Rejeitada', texto: 'Perde o efeito, e o Presidente não pode editar a mesma MP de novo no mesmo ano legislativo.', tom: 'ruim' },
     ],
   },
+]
+
+// ---------- Quantos votos precisa? ----------
+export interface Quorum {
+  nome: string
+  emoji: string
+  explicacao: string
+  camara: string // votos na Câmara (513 deputados)
+  senado: string // votos no Senado (81 senadores)
+  fracao: number // parte da Casa que precisa votar "sim" (para a barrinha)
+  usadoEm: string[]
+}
+
+export const QUORUNS: Quorum[] = [
+  {
+    nome: 'Maioria simples',
+    emoji: '✋',
+    explicacao: 'Ganha quem tiver mais votos entre as pessoas presentes. Mas a votação só vale se pelo menos metade da Casa estiver lá.',
+    camara: 'mais "sim" que "não", com pelo menos 257 presentes',
+    senado: 'mais "sim" que "não", com pelo menos 41 presentes',
+    fracao: 0.26,
+    usadoEm: ['Projeto de Lei (PL)', 'Medida Provisória', 'A maioria das votações do dia a dia'],
+  },
+  {
+    nome: 'Maioria absoluta',
+    emoji: '🖐️',
+    explicacao: 'Precisa do "sim" de mais da metade de TODOS os membros, mesmo de quem faltou. Faltar conta como não ajudar.',
+    camara: '257 de 513',
+    senado: '41 de 81',
+    fracao: 0.5,
+    usadoEm: ['Projeto de Lei Complementar (PLP)', 'Derrubar um veto do Presidente', 'Cassar o mandato de um parlamentar'],
+  },
+  {
+    nome: 'Três quintos (3/5)',
+    emoji: '🏅',
+    explicacao: 'Precisa de 3 em cada 5 membros dizendo "sim". É para mudanças muito importantes.',
+    camara: '308 de 513',
+    senado: '49 de 81',
+    fracao: 0.6,
+    usadoEm: ['Proposta de Emenda à Constituição (PEC), em cada um dos dois turnos'],
+  },
+  {
+    nome: 'Dois terços (2/3)',
+    emoji: '🏆',
+    explicacao: 'Precisa de 2 em cada 3 membros. É o mais difícil de todos, usado para decisões gravíssimas.',
+    camara: '342 de 513',
+    senado: '54 de 81',
+    fracao: 0.667,
+    usadoEm: ['Câmara: autorizar o processo de impeachment do Presidente', 'Senado: condenar o Presidente no impeachment'],
+  },
+]
+
+// ---------- Quem são e o que fazem ----------
+export interface Parlamentar {
+  id: 'federal' | 'estadual' | 'senador'
+  pergunta: string
+  emoji: string
+  cor: Cor
+  resumo: string
+  numeros: { rotulo: string; valor: string }[]
+  fazem: ItemExplicado[]
+  ferramentas: ItemExplicado[]
+}
+
+export const PARLAMENTARES: Parlamentar[] = [
+  {
+    id: 'federal',
+    pergunta: 'O que um deputado federal faz?',
+    emoji: '🟢',
+    cor: 'blue',
+    resumo: 'Representa o povo de todo o Brasil na Câmara dos Deputados, em Brasília. É como o representante de turma, só que da turma do país inteiro.',
+    numeros: [
+      { rotulo: 'Quantos são', valor: '513 (cada estado tem de 8 a 70, conforme a população)' },
+      { rotulo: 'Mandato', valor: '4 anos' },
+      { rotulo: 'Onde trabalha', valor: 'Câmara dos Deputados, em Brasília' },
+    ],
+    fazem: [
+      { icone: '📘', titulo: 'Cria e vota leis para o país', texto: 'Leis que valem em todo o Brasil, como regras de trânsito, do consumidor e de trabalho.' },
+      { icone: '🔦', titulo: 'Fiscaliza o governo federal', texto: 'Pode chamar ministros para explicar decisões, pedir informações e abrir CPIs para investigar.' },
+      { icone: '💰', titulo: 'Decide o Orçamento da União', texto: 'Junto com os senadores, aprova quanto dinheiro o governo federal pode gastar e em quê.' },
+      { icone: '⚖️', titulo: 'Autoriza o impeachment', texto: 'É a Câmara que decide se um processo contra o Presidente pode começar (precisa de 342 votos).' },
+    ],
+    ferramentas: [
+      { icone: '✍️', titulo: 'Poder de propor leis', texto: 'Pode apresentar PL e PLP sozinho, e PEC junto com pelo menos 171 colegas.' },
+      { icone: '🎁', titulo: 'Emendas parlamentares', texto: 'Pode indicar uma parte do Orçamento federal para obras e serviços, como um posto de saúde na sua cidade. Metade das emendas individuais vai para a saúde, e o governo é obrigado a pagar.' },
+      { icone: '🔎', titulo: 'CPI', texto: 'Com 171 assinaturas, cria uma Comissão Parlamentar de Inquérito, que investiga com poderes parecidos com os de um juiz.' },
+      { icone: '🛡️', titulo: 'Imunidade parlamentar', texto: 'Não pode ser processado pelo que fala e vota no exercício do mandato. Crimes comuns são julgados pelo STF.' },
+      { icone: '🗂️', titulo: 'Gabinete e verbas', texto: 'Tem assessores e uma verba para despesas do mandato, como viagens e escritório, com prestação de contas pública.' },
+    ],
+  },
+  {
+    id: 'estadual',
+    pergunta: 'O que um deputado estadual ou distrital faz?',
+    emoji: '🟠',
+    cor: 'amber',
+    resumo: 'Faz o mesmo trabalho de um deputado federal, mas para um estado só. No Distrito Federal ele se chama deputado distrital.',
+    numeros: [
+      { rotulo: 'Quantos são', valor: 'Depende do estado: de 24 a 94 (o DF tem 24 distritais)' },
+      { rotulo: 'Mandato', valor: '4 anos' },
+      { rotulo: 'Onde trabalha', valor: 'Assembleia Legislativa, na capital do estado (no DF, Câmara Legislativa)' },
+    ],
+    fazem: [
+      { icone: '📗', titulo: 'Cria e vota leis do estado', texto: 'Leis que valem só no estado, por exemplo sobre escolas estaduais, polícia e alguns impostos, como o ICMS.' },
+      { icone: '🔦', titulo: 'Fiscaliza o governador', texto: 'Acompanha o que o governo do estado faz com o dinheiro e pode abrir CPIs estaduais.' },
+      { icone: '💰', titulo: 'Decide o Orçamento do estado', texto: 'Aprova quanto o governo do estado pode gastar e em quê.' },
+      { icone: '🏙️', titulo: 'No DF, cuida também da cidade', texto: 'Como o DF não tem municípios, o distrital faz o papel de deputado estadual e de vereador.' },
+    ],
+    ferramentas: [
+      { icone: '✍️', titulo: 'Poder de propor leis estaduais', texto: 'Apresenta projetos na Assembleia e pode propor mudanças na Constituição do estado.' },
+      { icone: '🎁', titulo: 'Emendas ao orçamento do estado', texto: 'Na maioria dos estados também pode indicar parte do orçamento estadual para obras e serviços.' },
+      { icone: '🔎', titulo: 'CPI estadual', texto: 'Investiga assuntos do governo do estado.' },
+      { icone: '🛡️', titulo: 'Imunidade parlamentar', texto: 'Tem as mesmas proteções dos deputados federais pelo que fala e vota.' },
+      { icone: '🤝', titulo: 'Força em grupo', texto: 'Se mais da metade das Assembleias do país concordarem, elas podem propor uma PEC no Congresso.' },
+    ],
+  },
+  {
+    id: 'senador',
+    pergunta: 'O que um senador faz?',
+    emoji: '🟣',
+    cor: 'violet',
+    resumo: 'Representa o seu estado no Senado Federal. Todo estado tem o mesmo número de senadores, seja grande ou pequeno.',
+    numeros: [
+      { rotulo: 'Quantos são', valor: '81 (3 por estado e 3 pelo DF)' },
+      { rotulo: 'Mandato', valor: '8 anos (a cada 4 anos, renova-se 1/3 ou 2/3 do Senado)' },
+      { rotulo: 'Onde trabalha', valor: 'Senado Federal, em Brasília' },
+    ],
+    fazem: [
+      { icone: '📘', titulo: 'Cria e revisa leis', texto: 'Propõe leis e revisa as que vêm da Câmara. Uma lei federal só existe se as duas Casas aprovarem.' },
+      { icone: '🧑‍⚖️', titulo: 'Aprova nomes importantes', texto: 'Entrevista e aprova (ou não) ministros do STF, o Procurador-Geral da República, a diretoria do Banco Central e embaixadores.' },
+      { icone: '⚖️', titulo: 'Julga o impeachment', texto: 'Depois que a Câmara autoriza, é o Senado que julga o Presidente (precisa de 54 votos para condenar).' },
+      { icone: '🏦', titulo: 'Controla as dívidas', texto: 'Autoriza empréstimos de estados e municípios com o exterior e define limites para as dívidas públicas.' },
+    ],
+    ferramentas: [
+      { icone: '✍️', titulo: 'Poder de propor leis', texto: 'Pode apresentar PL e PLP sozinho, e PEC junto com pelo menos 27 colegas.' },
+      { icone: '🎁', titulo: 'Emendas parlamentares', texto: 'Assim como os deputados, indica parte do Orçamento federal para obras e serviços no seu estado.' },
+      { icone: '🔎', titulo: 'CPI', texto: 'Com 27 assinaturas, cria uma CPI no Senado.' },
+      { icone: '🛡️', titulo: 'Imunidade parlamentar', texto: 'Mesmas proteções dos deputados federais.' },
+      { icone: '👥', titulo: 'Suplentes', texto: 'Cada senador é eleito com dois suplentes, que assumem se o titular sair do cargo.' },
+    ],
+  },
+]
+
+export const DIFERENCAS: { aspecto: string; federal: string; estadual: string }[] = [
+  { aspecto: 'Para quem faz leis', federal: 'Para o Brasil inteiro', estadual: 'Só para o seu estado (ou para o DF)' },
+  { aspecto: 'Onde trabalha', federal: 'Câmara dos Deputados, em Brasília', estadual: 'Assembleia Legislativa do estado' },
+  { aspecto: 'Quem fiscaliza', federal: 'O Presidente e os ministros', estadual: 'O governador e os secretários' },
+  { aspecto: 'Que orçamento decide', federal: 'O da União', estadual: 'O do estado' },
+  { aspecto: 'Exemplo de lei', federal: 'Código de Trânsito, que vale em todo o país', estadual: 'Regras das escolas e da polícia do estado' },
 ]

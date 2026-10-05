@@ -1,0 +1,22 @@
+name: probe-camara (temporario)
+on: push
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          B=https://dadosabertos.camara.leg.br/api/v2
+          H='Accept: application/json'
+          echo "== referencias codSituacao"; curl -s -H "$H" "$B/referencias/proposicoes/codSituacao" | jq -c '.dados[]'
+          echo "== total PL 2026"; curl -s -H "$H" "$B/proposicoes?siglaTipo=PL&ano=2026&itens=1" | jq -c '.links'
+          echo "== codSituacao=1140"; curl -s -H "$H" "$B/proposicoes?siglaTipo=PL&ano=2026&itens=1&codSituacao=1140" | jq -c '.links'
+          echo "== codSituacao=923"; curl -s -H "$H" "$B/proposicoes?siglaTipo=PL&ano=2026&itens=1&codSituacao=923" | jq -c '.links'
+          echo "== codSituacao=923,1140"; curl -s -H "$H" "$B/proposicoes?siglaTipo=PL&ano=2026&itens=1&codSituacao=923,1140" | jq -c '.links'
+          echo "== sem ano, sem data"; curl -s -H "$H" "$B/proposicoes?siglaTipo=PL&itens=1" | jq -c '.links'
+          echo "== item de lista"; curl -s -H "$H" "$B/proposicoes?siglaTipo=PL&ano=2026&itens=1" | jq -c '.dados[0]'
+          echo "== arquivo anual (tamanho e amostra)"; curl -sI "https://dadosabertos.camara.leg.br/arquivos/proposicoes/json/proposicoes-2026.json" | grep -i -E "content-length|HTTP"
+          curl -s "https://dadosabertos.camara.leg.br/arquivos/proposicoes/json/proposicoes-2026.json" -o p.json; jq -c '.dados | length' p.json
+          jq -c '[.dados[] | select(.siglaTipo=="PL")] | length' p.json
+          jq -c '[.dados[] | select(.siglaTipo=="PL") | .ultimoStatus.descricaoSituacao] | group_by(.) | map({s: .[0], n: length}) | sort_by(-.n)' p.json
+          jq -c '[.dados[] | select(.siglaTipo=="PL")][0] | keys' p.json
+          jq -c '[.dados[] | select(.siglaTipo=="PL")][0].ultimoStatus' p.json

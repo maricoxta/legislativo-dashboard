@@ -418,11 +418,12 @@ def senado_pls(ano: int):
             vistos[p["id"]] = p
         ini = fim + timedelta(days=1)
         time.sleep(0.15)  # a API do Senado limita a 10 requisições por segundo
-    return pd.DataFrame([{"id": p["id"], "identificacao": p.get("identificacao"), "ementa": p.get("ementa"), "ano": ano}
+    return pd.DataFrame([{"id": p["id"], "identificacao": p.get("identificacao"), "ementa": p.get("ementa"), "ano": ano,
+                          "data_apresentacao": p.get("dataApresentacao")}
                          for p in vistos.values() if p.get("ementa")])
 
 partes = []
-camara_aplic = df[df.ano.isin(ANOS_APLICACAO)][["id", "ano", "ementa"]].assign(casa="Câmara", identificacao=None)
+camara_aplic = df[df.ano.isin(ANOS_APLICACAO)][["id", "ano", "ementa", "data_apresentacao"]].assign(casa="Câmara", identificacao=None)
 partes.append(camara_aplic)
 for ano in ANOS_APLICACAO:
     try:
@@ -456,6 +457,10 @@ display(spark.table("gold_pl_temas_previstos").where("principal")
 import json
 anos_df = df.assign(com_tema=df.temas.map(len) > 0).groupby("ano").agg(pls=("id", "size"), pct_com_tema=("com_tema", "mean"))
 dist = spark.table("gold_pl_temas_previstos").where("principal").groupBy("casa").count().toPandas()
+temas_casa = (spark.table("gold_pl_temas_previstos").where("principal").groupBy("casa", "ano", "tema").count().toPandas()
+              .sort_values("count", ascending=False).groupby(["casa", "ano"]).head(8))
+aplic["mes"] = pd.to_datetime(aplic.data_apresentacao.astype(str).str[:10], errors="coerce").dt.month
+por_mes = aplic.dropna(subset=["mes"]).groupby(["casa", "ano", "mes"]).size()
 resumo = {
     "pls_por_ano": {int(a): {"pls": int(r.pls), "pct_com_tema": round(100 * r.pct_com_tema, 1)} for a, r in anos_df.iterrows()},
     "tamanhos": {"treino": len(treino), "validacao": len(valid), "teste": len(teste)},
@@ -465,5 +470,7 @@ resumo = {
     "por_tema": por_tema.round(3).to_dict(orient="records"),
     "erros_top_pares": {f"{a} → {b}": int(n) for (a, b), n in erros.groupby(["tema_principal", "top1_M2"]).size().sort_values(ascending=False).head(10).items()},
     "aplicacao_pls_classificados": dict(zip(dist.casa, dist["count"].astype(int))),
+    "temas_principais_por_casa": {f"{c} {a}": {r.tema: int(r["count"]) for _, r in g.iterrows()} for (c, a), g in temas_casa.groupby(["casa", "ano"])},
+    "pls_por_mes": {f"{c} {a}": {int(m): int(n) for (_, _, m), n in g.items()} for (c, a), g in por_mes.groupby(level=[0, 1])},
 }
 print(json.dumps(resumo, ensure_ascii=False, default=str))

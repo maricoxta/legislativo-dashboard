@@ -3,32 +3,20 @@ import './globals.css'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { DrawerProvider } from '@/components/detalhe/DrawerProvider'
-import { createClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
   title: 'Legislativo BR – Painel de Proposições',
   description: 'Acompanhe proposições legislativas da Câmara dos Deputados e do Senado Federal.',
 }
 
-async function getUser() {
-  try {
-    const supabase = await createClient()
-    if (!supabase) return null
-    const { data: { user } } = await supabase.auth.getUser()
-    return user
-  } catch { return null }
-}
-
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const user = await getUser()
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className="h-full">
       <body className="min-h-full flex antialiased">
         <Sidebar />
         <DrawerProvider>
           <div className="ml-64 flex-1 flex flex-col min-h-screen">
-            <Topbar userEmail={user?.email} />
+            <Topbar />
             <main className="flex-1 p-6">{children}</main>
           </div>
         </DrawerProvider>

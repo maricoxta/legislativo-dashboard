@@ -6,7 +6,7 @@ diariamente pela Câmara) traz o último status de cada proposição. Este job
 baixa o arquivo, fica só com os PLs do ano e faz upsert na tabela
 camara_pl_situacao.
 
-Uso: python jobs/camara_situacao.py [ano ...]   (padrão: ano corrente)
+Uso: python jobs/camara_situacao.py [ano ...]   (padrão: ano corrente e anterior)
 Variáveis: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 """
 
@@ -102,7 +102,7 @@ def upsert(registros: list[dict]):
 
 
 def main():
-    anos = [int(a) for a in sys.argv[1:]] or [date.today().year]
+    anos = [int(a) for a in sys.argv[1:]] or [date.today().year, date.today().year - 1]
     for ano in anos:
         registros = [r for r in pls_do_ano(ano) if r["id"] is not None]
         if not registros:

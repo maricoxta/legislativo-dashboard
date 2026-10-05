@@ -47,6 +47,18 @@ export interface LinhaSituacaoCamara {
   sigla_orgao: string | null
 }
 
+const paraProposicao = (l: LinhaSituacaoCamara): ProposicaoCamara => ({
+  id: l.id,
+  siglaTipo: l.sigla_tipo,
+  numero: l.numero,
+  ano: l.ano,
+  ementa: l.ementa ?? '',
+  dataApresentacao: l.data_apresentacao ?? undefined,
+  statusProposicao: l.descricao_situacao
+    ? { descricaoSituacao: l.descricao_situacao, siglaOrgao: l.sigla_orgao ?? undefined, dataHora: l.data_situacao ?? undefined }
+    : undefined,
+})
+
 function consultaSituacao(f: FiltroSituacao, colunas: string, opcoes: { count: 'exact'; head?: boolean }) {
   const supabase = createAdminClient()
   if (!supabase) throw new Error('Supabase não configurado')
@@ -69,17 +81,26 @@ export async function listarSituacaoCamara(f: FiltroSituacao, pagina: number, po
     .order('id', { ascending: false })
     .range(inicio, inicio + porPagina - 1)
   if (error) throw new Error(error.message)
-  const linhas = (data ?? []) as unknown as LinhaSituacaoCamara[]
-  const dados: ProposicaoCamara[] = linhas.map(l => ({
-    id: l.id,
-    siglaTipo: l.sigla_tipo,
-    numero: l.numero,
-    ano: l.ano,
-    ementa: l.ementa ?? '',
-    dataApresentacao: l.data_apresentacao ?? undefined,
-    statusProposicao: l.descricao_situacao
-      ? { descricaoSituacao: l.descricao_situacao, siglaOrgao: l.sigla_orgao ?? undefined, dataHora: l.data_situacao ?? undefined }
-      : undefined,
-  }))
+  const dados = ((data ?? []) as unknown as LinhaSituacaoCamara[]).map(paraProposicao)
   return { dados, total: count ?? 0 }
+}
+
+// Busca na ementa dos PLs da tabela camara_pl_situacao. O parâmetro
+// `keywords` da API só olha a indexação da Câmara, que costuma vir vazia
+// nos projetos recentes; a ementa sempre existe.
+export async function buscarEmentaCamara(palavras: string[], desde: string, limite = 100): Promise<ProposicaoCamara[]> {
+  const supabase = createAdminClient()
+  if (!supabase) return []
+  // Vírgulas, parênteses, aspas e * quebram o filtro `or` do PostgREST.
+  const termos = palavras.map(p => p.replace(/[,()"*\\]/g, ' ').trim()).filter(Boolean)
+  if (!termos.length) return []
+  const { data, error } = await supabase
+    .from('camara_pl_situacao')
+    .select('*')
+    .or(termos.map(t => `ementa.ilike."*${t}*"`).join(','))
+    .gte('data_apresentacao', desde)
+    .order('id', { ascending: false })
+    .limit(limite)
+  if (error) throw new Error(error.message)
+  return ((data ?? []) as LinhaSituacaoCamara[]).map(paraProposicao)
 }

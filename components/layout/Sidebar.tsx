@@ -3,11 +3,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV = [
-  { href: '/', label: 'Entenda o Processo' },
-  { href: '/dashboard', label: 'Dashboard', icon: <rect x="3" y="3" width="7" height="7"/>, icon2: <><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></> },
+  { href: '/', label: 'Entenda!' },
+  { href: '/dashboard', label: 'Dados Gerais' },
+  { href: '/agenda', label: 'Agenda Legislativa' },
   { href: '/busca', label: 'Busca Avançada' },
   { href: '/monitoramento', label: 'Monitoramento por Temas' },
-  { href: '/agenda', label: 'Agenda Legislativa' },
 ]
 
 function NavLink({ href, label }: { href: string; label: string }) {
@@ -44,10 +44,7 @@ export function Sidebar() {
         {NAV.map(n => <NavLink key={n.href} href={n.href} label={n.label} />)}
 
         <div className="pt-3">
-          <div className="flex items-center gap-2 px-3 mb-1.5">
-            <div className="w-2 h-2 rounded-full bg-violet-300" />
-            <span className="text-xs font-semibold text-violet-200 uppercase tracking-wider">Senado</span>
-          </div>
+          <p className="px-3 mb-1.5 text-xs font-semibold text-violet-200 uppercase tracking-wider">Explorar proposições</p>
           {(['PL','PEC','MPV'] as const).map(t => (
             <Link key={t} href={`/proposicoes/senado/${t}`}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-violet-800 transition-colors text-violet-100 text-xs">

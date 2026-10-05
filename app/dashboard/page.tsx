@@ -85,7 +85,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Dashboard</h1>
+          <h1 className="text-xl font-bold text-slate-900">Dados Gerais</h1>
           <p className="text-sm text-slate-500">Projetos de lei apresentados em {year} na Câmara e no Senado</p>
         </div>
         <SeletorAno ano={year} />

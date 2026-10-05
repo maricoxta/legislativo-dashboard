@@ -15,6 +15,7 @@ import io
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from datetime import date, datetime, timezone
 
@@ -82,8 +83,17 @@ def pls_do_ano(ano: int):
         }
 
 
+def base_supabase() -> str:
+    # Aceita a Project URL com ou sem "/rest/v1" no final.
+    base = os.environ["SUPABASE_URL"].strip().rstrip("/")
+    base = base.removesuffix("/rest/v1")
+    if not base.startswith("https://") or "supabase.com/dashboard" in base:
+        sys.exit("SUPABASE_URL deve ser a Project URL, no formato https://<id>.supabase.co")
+    return base
+
+
 def upsert(registros: list[dict]):
-    url = os.environ["SUPABASE_URL"].rstrip("/") + f"/rest/v1/{TABELA}?on_conflict=id"
+    url = base_supabase() + f"/rest/v1/{TABELA}?on_conflict=id"
     chave = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
     req = urllib.request.Request(
         url,
@@ -96,9 +106,13 @@ def upsert(registros: list[dict]):
             "Prefer": "resolution=merge-duplicates,return=minimal",
         },
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        if resp.status >= 300:
-            sys.exit(f"Supabase respondeu {resp.status}: {resp.read()[:500]!r}")
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            if resp.status >= 300:
+                sys.exit(f"Supabase respondeu {resp.status}: {resp.read()[:500]!r}")
+    except urllib.error.HTTPError as e:
+        # O corpo da resposta do PostgREST explica o erro (ex.: tabela não encontrada).
+        sys.exit(f"Supabase respondeu {e.code}: {e.read()[:500]!r}")
 
 
 def main():

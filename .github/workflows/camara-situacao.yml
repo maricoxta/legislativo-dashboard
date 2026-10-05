@@ -8,13 +8,13 @@ on:
   workflow_dispatch:
     inputs:
       ano:
-        description: 'Ano dos PLs (vazio = ano corrente)'
+        description: 'Ano dos PLs (vazio = últimos 12 anos)'
         required: false
 
 jobs:
   carregar:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

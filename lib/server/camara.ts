@@ -2,6 +2,7 @@ import { getCached, setCache } from '@/lib/cache'
 import { createAdminClient, supabaseUrl } from '@/lib/supabase/admin'
 import { CAMARA_API } from '@/lib/config'
 import { ProposicaoCamara } from '@/types/camara'
+import { COD_CAMARA } from '@/lib/situacoes'
 
 export interface ListaCamara {
   dados: ProposicaoCamara[]
@@ -104,6 +105,23 @@ export async function buscarEmentaCamara(palavras: string[], desde: string, limi
     .limit(limite)
   if (error) throw new Error(error.message)
   return ((data ?? []) as LinhaSituacaoCamara[]).map(paraProposicao)
+}
+
+// PLs que viraram lei dentro do ano, apresentados em qualquer ano. A data é
+// a do último andamento, que para quem virou lei é a da transformação em
+// norma. Inclui projetos vindos do Senado, que ganham número na Câmara.
+export async function leisSancionadasNoAno(ano: number): Promise<number> {
+  const supabase = createAdminClient()
+  if (!supabase) throw new Error('Supabase não configurado')
+  const { count, error, status } = await supabase
+    .from('camara_pl_situacao')
+    .select('id', { count: 'exact', head: true })
+    .eq('sigla_tipo', 'PL')
+    .in('cod_situacao', COD_CAMARA.lei)
+    .gte('data_situacao', `${ano}-01-01`)
+    .lt('data_situacao', `${ano + 1}-01-01`)
+  if (error) throw new Error([`HTTP ${status}`, error.message].filter(Boolean).join(' — '))
+  return count ?? 0
 }
 
 // PLs apresentados em cada mês do ano (12 contagens, uma por mês).

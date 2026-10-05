@@ -4,7 +4,7 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { BillCard } from '@/components/proposicoes/BillCard'
 import { SenadoCard } from '@/components/proposicoes/SenadoCard'
 import { DashboardCharts } from '@/components/dashboard/Charts'
-import { diagnosticoCamara, listarSituacaoCamara } from '@/lib/server/camara'
+import { diagnosticoCamara, leisSancionadasNoAno, listarSituacaoCamara } from '@/lib/server/camara'
 import { processosDoAno } from '@/lib/server/senado'
 import { indicadoresDoAno, IndicadoresCasa, INDICADORES_VAZIOS, porMesDoAno } from '@/lib/server/indicadores'
 
@@ -20,12 +20,13 @@ function anosDisponiveis() {
 async function fetchDashboardData(year: number) {
   await connection() // renderiza a cada request, como o antigo cache: 'no-store'
 
-  const [camaraRes, senadoRes, indicadores, meses, diag] = await Promise.allSettled([
+  const [camaraRes, senadoRes, indicadores, meses, diag, leis] = await Promise.allSettled([
     listarSituacaoCamara({ ano: year }, 1, 10),
     processosDoAno('PL', year),
     indicadoresDoAno(year),
     porMesDoAno(year),
     diagnosticoCamara(year),
+    leisSancionadasNoAno(year),
   ])
 
   const bills = camaraRes.status === 'fulfilled' ? camaraRes.value.dados : []
@@ -35,7 +36,9 @@ async function fetchDashboardData(year: number) {
 
   const avisoCamara = diag.status === 'fulfilled' ? diag.value : 'erro inesperado ao consultar a tabela'
 
-  return { bills, senadoData, kpis, porMes, avisoCamara }
+  const leisNoAno = leis.status === 'fulfilled' ? leis.value : null
+
+  return { bills, senadoData, kpis, porMes, avisoCamara, leisNoAno }
 }
 
 const fmt = (n: number | null) => (n === null ? '—' : n.toLocaleString('pt-BR'))
@@ -51,7 +54,7 @@ function KpisCasa({ casa, fonte, year, k, cor }: { casa: string; fonte: 'camara'
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label={`PLs de ${year}`} value={fmt(k.total)} emoji="📋" sub="apresentados no ano" color={cor} href={lista()} />
         <StatCard label="Em tramitação" value={fmt(k.tramitando)} emoji="⏳" sub={pct(k.tramitando, k.total)} color="amber" href={lista('tramitando')} />
-        <StatCard label="Aprovados ou viraram lei" value={fmt(k.aprovados)} emoji="✅" sub={pct(k.aprovados, k.total)} color="green" href={lista('aprovados')} />
+        <StatCard label="Aprovados até agora" value={fmt(k.aprovados)} emoji="✅" sub={pct(k.aprovados, k.total)} color="green" href={lista('aprovados')} />
         <StatCard label="Vetados" value={fmt(k.vetados)} emoji="🚫" sub={pct(k.vetados, k.total)} color="red" href={lista('vetados')} />
         <StatCard label="Não aprovados" value={fmt(k['nao-aprovados'])} emoji="🗄️" sub={pct(k['nao-aprovados'], k.total) ?? 'arquivados, rejeitados ou retirados'} color="gray" href={lista('nao-aprovados')} />
       </div>
@@ -78,7 +81,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const atual = new Date().getFullYear()
   const pedido = parseInt(sp.ano ?? '')
   const year = anosDisponiveis().includes(pedido) ? pedido : atual
-  const { bills, senadoData, kpis, porMes, avisoCamara } = await fetchDashboardData(year)
+  const { bills, senadoData, kpis, porMes, avisoCamara, leisNoAno } = await fetchDashboardData(year)
   const mesesVisiveis = year === atual ? new Date().getMonth() + 1 : 12
 
   return (
@@ -97,6 +100,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <p className="-mt-3 text-xs text-slate-500">⚠️ Dados da Câmara indisponíveis: {avisoCamara}.</p>
       )}
       <KpisCasa casa="Senado Federal" fonte="senado" year={year} k={kpis.senado} cor="violet" />
+      <p className="-mt-3 text-xs text-slate-500">
+        Os cards acima mostram a situação atual dos PLs apresentados em {year}. Projetos apresentados no fim do ano
+        costumam levar mais de um ano para virar lei, por isso o número de aprovados é menor nos anos recentes.
+      </p>
+
+      {/* Leis do ano, contadas pela data em que viraram lei */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard
+          label={year === new Date().getFullYear() ? `Leis sancionadas em ${year} (até hoje)` : `Leis sancionadas em ${year}`}
+          value={fmt(leisNoAno)}
+          emoji="📜"
+          sub="PLs que viraram lei no ano, apresentados em qualquer ano"
+          color="indigo"
+        />
+      </div>
 
       {/* Gráficos */}
       <DashboardCharts ano={year} mesesVisiveis={mesesVisiveis} kpis={kpis} porMes={porMes} />

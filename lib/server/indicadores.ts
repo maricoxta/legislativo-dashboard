@@ -1,4 +1,4 @@
-import { contarSituacaoCamara, FiltroSituacao } from '@/lib/server/camara'
+import { contarSituacaoCamara, FiltroSituacao, porMesCamara } from '@/lib/server/camara'
 import { processosDoAno } from '@/lib/server/senado'
 import { COD_CAMARA_ENCERRADAS, StatusPL, codigosCamara, statusSenado } from '@/lib/situacoes'
 
@@ -53,4 +53,20 @@ export async function indicadoresDoAno(ano: number) {
     camara: ok(camara) ?? INDICADORES_VAZIOS,
     senado: ok(senado) ?? INDICADORES_VAZIOS,
   }
+}
+
+// PLs apresentados por mês (índice 0 = janeiro). null = fonte indisponível.
+export async function porMesDoAno(ano: number) {
+  const [camara, senado] = await Promise.allSettled([
+    porMesCamara(ano).then(m => (m.some(Boolean) ? m : null)),
+    processosDoAno('PL', ano).then(ps => {
+      const m = Array<number>(12).fill(0)
+      for (const p of ps) {
+        const i = Number(p.dataApresentacao?.slice(5, 7)) - 1
+        if (i >= 0 && i < 12) m[i]++
+      }
+      return m
+    }),
+  ])
+  return { camara: ok(camara), senado: ok(senado) }
 }

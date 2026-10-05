@@ -22,11 +22,11 @@ function Itens({ itens }: { itens: ItemExplicado[] }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
       {itens.map(i => (
-        <li key={i.titulo} className="flex gap-3 bg-white rounded-xl border border-gray-100 p-3 shadow-sm animate-[aparecer_.35s_ease-out]">
+        <li key={i.titulo} className="flex gap-3 bg-white rounded-xl border border-slate-100 p-3 shadow-sm animate-[aparecer_.35s_ease-out]">
           <span className="text-2xl leading-none">{i.icone}</span>
           <div>
-            <p className="text-sm font-semibold text-gray-800">{i.titulo}</p>
-            <p className="text-sm text-gray-600 leading-snug">{i.texto}</p>
+            <p className="text-sm font-semibold text-slate-800">{i.titulo}</p>
+            <p className="text-sm text-slate-600 leading-snug">{i.texto}</p>
           </div>
         </li>
       ))}
@@ -80,7 +80,7 @@ export function MapaMental() {
                 <span className="text-3xl animate-[flutuar_3s_ease-in-out_infinite]" style={{ animationDelay: `${i * 0.4}s` }}>{c.emoji}</span>
                 <div>
                   <p className={`text-lg font-extrabold leading-none ${cor.texto}`}>{c.sigla}</p>
-                  <p className="text-xs text-gray-600 leading-tight">{c.nome}</p>
+                  <p className="text-xs text-slate-600 leading-tight">{c.nome}</p>
                 </div>
               </div>
             </button>
@@ -102,7 +102,7 @@ export function MapaMental() {
               className={`rounded-2xl border-2 bg-white p-3 text-left ${cor.borda} ${selecionado === c.id ? `ring-4 ${cor.anel}` : ''}`}>
               <span className="text-2xl">{c.emoji}</span>
               <p className={`font-extrabold ${cor.texto}`}>{c.sigla}</p>
-              <p className="text-xs text-gray-600">{c.nome}</p>
+              <p className="text-xs text-slate-600">{c.nome}</p>
             </button>
           )
         })}
@@ -111,22 +111,22 @@ export function MapaMental() {
       {/* Explicação do item escolhido */}
       {conceito === null ? (
         <div key="proposicao" className="rounded-2xl bg-indigo-50 border border-indigo-100 p-5 space-y-2 animate-[aparecer_.35s_ease-out]">
-          <p className="text-base text-gray-800"><strong>{PROPOSICAO.nome}</strong>: {PROPOSICAO.ideia}</p>
-          <p className="text-sm text-gray-700">🏫 {PROPOSICAO.analogia}</p>
+          <p className="text-base text-slate-800"><strong>{PROPOSICAO.nome}</strong>: {PROPOSICAO.ideia}</p>
+          <p className="text-sm text-slate-700">🏫 {PROPOSICAO.analogia}</p>
           <p className="text-sm text-indigo-700 font-medium">👆 {PROPOSICAO.tipos}</p>
         </div>
       ) : (
         <div key={conceito.id} className={`rounded-2xl border p-5 space-y-4 animate-[aparecer_.35s_ease-out] ${CORES[conceito.cor].bg} ${CORES[conceito.cor].borda}`}>
           <div>
             <h3 className={`text-lg font-extrabold ${CORES[conceito.cor].texto}`}>{conceito.emoji} {conceito.sigla}: {conceito.nome}</h3>
-            <p className="text-base text-gray-800 mt-1">{conceito.ideia}</p>
-            <p className="text-sm text-gray-700 mt-1">🏫 {conceito.analogia}</p>
+            <p className="text-base text-slate-800 mt-1">{conceito.ideia}</p>
+            <p className="text-sm text-slate-700 mt-1">🏫 {conceito.analogia}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             {ABAS.map(a => (
               <button key={a.id} onClick={() => setAba(a.id)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${aba === a.id ? `${CORES[conceito.cor].bgForte} text-white shadow` : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}`}>
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${aba === a.id ? `${CORES[conceito.cor].bgForte} text-white shadow` : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'}`}>
                 {a.emoji} {a.titulo}
               </button>
             ))}
@@ -137,7 +137,7 @@ export function MapaMental() {
           </div>
 
           {conceito.atencao && (
-            <p className="text-sm text-gray-700 bg-white/70 rounded-xl p-3 border border-gray-100">⚠️ {conceito.atencao}</p>
+            <p className="text-sm text-slate-700 bg-white/70 rounded-xl p-3 border border-slate-100">⚠️ {conceito.atencao}</p>
           )}
         </div>
       )}

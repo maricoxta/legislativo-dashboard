@@ -104,3 +104,23 @@ export async function buscarEmentaCamara(palavras: string[], desde: string, limi
   if (error) throw new Error(error.message)
   return ((data ?? []) as LinhaSituacaoCamara[]).map(paraProposicao)
 }
+
+// PLs apresentados em cada mês do ano (12 contagens, uma por mês).
+export async function porMesCamara(ano: number): Promise<number[]> {
+  const supabase = createAdminClient()
+  if (!supabase) throw new Error('Supabase não configurado')
+  const mes = (m: number) => `${m > 12 ? ano + 1 : ano}-${String(m > 12 ? 1 : m).padStart(2, '0')}-01`
+  return Promise.all(
+    Array.from({ length: 12 }, async (_, i) => {
+      const { count, error } = await supabase
+        .from('camara_pl_situacao')
+        .select('id', { count: 'exact', head: true })
+        .eq('sigla_tipo', 'PL')
+        .eq('ano', ano)
+        .gte('data_apresentacao', mes(i + 1))
+        .lt('data_apresentacao', mes(i + 2))
+      if (error) throw new Error(error.message)
+      return count ?? 0
+    }),
+  )
+}

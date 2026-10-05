@@ -71,7 +71,7 @@ function consultaSituacao(f: FiltroSituacao, colunas: string, opcoes: { count: '
 
 export async function contarSituacaoCamara(f: FiltroSituacao): Promise<number> {
   const { count, error } = await consultaSituacao(f, 'id', { count: 'exact', head: true })
-  if (error) throw new Error(error.message)
+  if (error) throw new Error([error.message, error.details].filter(Boolean).join(" — "))
   return count ?? 0
 }
 
@@ -136,6 +136,10 @@ export async function diagnosticoCamara(ano: number): Promise<string | null> {
     const n = await contarSituacaoCamara({ ano })
     return n ? null : `a tabela camara_pl_situacao não tem PLs de ${ano}`
   } catch (e) {
-    return `o Supabase respondeu: ${e instanceof Error ? e.message : String(e)}`
+    // "fetch failed" esconde o motivo real (endereço inexistente, etc.) em e.cause.
+    const causa = e instanceof Error && e.cause instanceof Error ? ` (${e.cause.message})` : ''
+    let host = url
+    try { host = new URL(url.trim()).host } catch {}
+    return `o Supabase respondeu: ${e instanceof Error ? e.message : String(e)}${causa}; endereço usado: ${host}`
   }
 }

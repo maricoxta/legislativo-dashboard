@@ -63,15 +63,6 @@ export function BuscaForm({ initialParams }: Props) {
       const senado: ProcessoSenado[] = sr.status === 'fulfilled' ? (Array.isArray(sr.value) ? sr.value : []) : []
 
       setResults({ camara, senado })
-
-      // Salva histórico (silencioso, ignora falha)
-      if (q) {
-        fetch('/api/buscas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ termo: q, filtros: { tipo, ano, partido, uf }, resultado_count: camara.length + senado.length }),
-        }).catch(() => {})
-      }
     } finally {
       setLoading(false)
     }

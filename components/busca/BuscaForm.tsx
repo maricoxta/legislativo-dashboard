@@ -24,45 +24,31 @@ export function BuscaForm({ initialParams }: Props) {
   const [partido, setPartido] = useState(initialParams.partido ?? '')
   const [uf, setUf] = useState(initialParams.uf ?? '')
   const [useCamara, setUseCamara] = useState(true)
-  const [useSenado, setUseSenado] = useState(false)
+  const [useSenado, setUseSenado] = useState(true)
 
-  const [results, setResults] = useState<{ camara: ProposicaoCamara[]; senado: ProcessoSenado[] } | null>(null)
+  const [results, setResults] = useState<{ camara: ProposicaoCamara[]; senado: ProcessoSenado[]; avisos: string[] } | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (initialParams.q || initialParams.numero) doSearch()
   }, [])
 
-  async function doSearch() {
-    const hasInput = q || numero || partido || uf || tipo || codTema
-    if (!hasInput) return
+  async function doSearch(termo?: string) {
+    const busca = termo ?? q
+    const hasInput = busca || numero || partido || uf || tipo || codTema || ano
+    if (!hasInput || (!useCamara && !useSenado)) return
 
     setLoading(true)
     try {
-      const camaraQs = new URLSearchParams({ itens: '20' })
-      if (q) camaraQs.set('keywords', q)
-      if (tipo) camaraQs.set('siglaTipo', tipo)
-      if (ano) camaraQs.set('ano', ano)
-      if (codTema) camaraQs.set('codTema', codTema)
-      if (numero) camaraQs.set('numero', numero)
-      if (partido) camaraQs.set('siglaPartidoAutor', partido)
-      if (uf) camaraQs.set('siglaUfAutor', uf)
-
-      const senadoQs = new URLSearchParams({ limite: '10' })
-      if (q) senadoQs.set('termo', q)
-      if (ano) senadoQs.set('ano', ano)
-      if (tipo) senadoQs.set('sigla', tipo)
-      if (numero) senadoQs.set('numero', numero)
-
-      const [cr, sr] = await Promise.allSettled([
-        useCamara ? fetch(`/api/camara/proposicoes?${camaraQs}`).then(r => r.json()) : Promise.resolve({ dados: [] }),
-        useSenado ? fetch(`/api/senado/processos?${senadoQs}`).then(r => r.json()) : Promise.resolve([]),
-      ])
-
-      const camara: ProposicaoCamara[] = cr.status === 'fulfilled' ? (cr.value?.dados ?? []) : []
-      const senado: ProcessoSenado[] = sr.status === 'fulfilled' ? (Array.isArray(sr.value) ? sr.value : []) : []
-
-      setResults({ camara, senado })
+      const qs = new URLSearchParams({ camara: useCamara ? '1' : '0', senado: useSenado ? '1' : '0' })
+      const campos: Record<string, string> = { q: busca, numero, tipo, ano, codTema, partido, uf }
+      for (const [k, v] of Object.entries(campos)) if (v) qs.set(k, v)
+      const r = await fetch(`/api/busca?${qs}`).then(res => res.json()).catch(() => null)
+      setResults({
+        camara: r?.camara ?? [],
+        senado: r?.senado ?? [],
+        avisos: r ? (r.avisos ?? []) : ['Não foi possível buscar agora. Tente de novo em instantes.'],
+      })
     } finally {
       setLoading(false)
     }
@@ -70,7 +56,7 @@ export function BuscaForm({ initialParams }: Props) {
 
   function handleSugestao(term: string) {
     setQ(term)
-    setTimeout(doSearch, 50)
+    doSearch(term)
   }
 
   return (
@@ -88,7 +74,7 @@ export function BuscaForm({ initialParams }: Props) {
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Número</label>
-            <input type="text" value={numero} onChange={e => setNumero(e.target.value)} placeholder="ex: 1234"
+            <input type="text" value={numero} onChange={e => setNumero(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()} placeholder="ex: 1234 ou 1234/2022"
               className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
@@ -145,7 +131,7 @@ export function BuscaForm({ initialParams }: Props) {
         </div>
 
         <div className="flex gap-3">
-          <button onClick={doSearch}
+          <button onClick={() => doSearch()}
             className="px-6 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
             🔍 Buscar
           </button>
@@ -178,6 +164,7 @@ export function BuscaForm({ initialParams }: Props) {
             <strong className="text-slate-800">{results.camara.length + results.senado.length}</strong> resultado(s) ·{' '}
             {results.camara.length} Câmara, {results.senado.length} Senado
           </p>
+          {results.avisos.map(a => <p key={a} className="text-xs text-slate-400 mb-2">{a}</p>)}
           {results.camara.length + results.senado.length === 0
             ? <p className="text-center text-slate-400 py-12 text-sm">Nenhuma proposição encontrada.</p>
             : (

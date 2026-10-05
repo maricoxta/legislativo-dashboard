@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { listarProposicoesCamara } from '@/lib/server/camara'
+import { buscarEmentaCamara, listarProposicoesCamara } from '@/lib/server/camara'
 import { ProposicaoCamara } from '@/types/camara'
 
-// Proposições da Câmara que batem com QUALQUER palavra-chave do tema.
-// A API aceita uma palavra por vez em `keywords`; consultamos cada uma e
-// juntamos o resultado, guardando quais palavras encontraram cada proposição.
-// Sem parâmetro de data a API só olha os últimos 30 dias de tramitação, por
-// isso buscamos o que foi apresentado nos últimos 12 meses.
+// Proposições da Câmara que batem com QUALQUER palavra-chave do tema, de
+// duas fontes somadas:
+// 1. a ementa dos PLs na tabela camara_pl_situacao (job diário);
+// 2. o parâmetro `keywords` da API, uma palavra por vez (só acha o que a
+//    Câmara já indexou). Sem data a API só olha 30 dias de tramitação, por
+//    isso pedimos o que foi apresentado nos últimos 12 meses.
 const POR_PALAVRA = 20
 const MAX_PALAVRAS = 15
 
@@ -30,11 +31,19 @@ export async function GET(req: NextRequest) {
   ))
 
   const porId = new Map<number, { bill: ProposicaoCamara; palavras: string[] }>()
+
+  const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const naEmenta = await buscarEmentaCamara(palavras, iso(umAnoAtras)).catch(() => [])
+  for (const bill of naEmenta) {
+    const ementa = semAcento(bill.ementa)
+    porId.set(bill.id, { bill, palavras: palavras.filter(p => ementa.includes(semAcento(p))) })
+  }
+
   for (const r of resultados) {
     if (r.status !== 'fulfilled') continue
     for (const bill of r.value.dados) {
       const item = porId.get(bill.id) ?? { bill, palavras: [] }
-      item.palavras.push(r.value.kw)
+      if (!item.palavras.includes(r.value.kw)) item.palavras.push(r.value.kw)
       porId.set(bill.id, item)
     }
   }

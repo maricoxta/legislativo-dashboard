@@ -12,7 +12,7 @@ interface Tema {
   keywords: string[]
 }
 
-const CNM_TEMAS: Tema[] = [
+const TEMAS_PADRAO: Tema[] = [
   { id: 'saneamento', nome: 'Saneamento', emoji: '💧', cor: 'blue', keywords: ['saneamento', 'água potável', 'esgoto', 'resíduos sólidos'] },
   { id: 'meio-ambiente', nome: 'Meio Ambiente', emoji: '🌿', cor: 'green', keywords: ['mudança climática', 'clima', 'carbono', 'conservação'] },
   { id: 'defesa-civil', nome: 'Defesa Civil', emoji: '⛑️', cor: 'orange', keywords: ['desastre', 'enchente', 'seca', 'risco', 'emergência'] },
@@ -30,9 +30,9 @@ interface Resultado {
   palavras: string[] // palavras-chave do tema que encontraram a proposição
 }
 
-// Os temas CNM são fixos no código; as palavras que o usuário muda neles
+// Os temas padrão são fixos no código; as palavras que o usuário muda neles
 // ficam neste navegador. Temas personalizados são salvos no Supabase.
-const CHAVE_LOCAL = 'monitoramento:palavras-cnm'
+const CHAVE_LOCAL = 'monitoramento:palavras-padrao'
 
 function lerPalavrasLocais(): Record<string, string[]> {
   try { return JSON.parse(localStorage.getItem(CHAVE_LOCAL) ?? '{}') } catch { return {} }
@@ -44,19 +44,19 @@ function salvarPalavrasLocais(v: Record<string, string[]>) {
 
 export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) {
   const [customTemas, setCustomTemas] = useState<Tema[]>(initialTemas)
-  const [palavrasCnm, setPalavrasCnm] = useState<Record<string, string[]>>({})
-  const [ativoId, setAtivoId] = useState<string>(CNM_TEMAS[0].id)
+  const [palavrasPadrao, setPalavrasPadrao] = useState<Record<string, string[]>>({})
+  const [ativoId, setAtivoId] = useState<string>(TEMAS_PADRAO[0].id)
   const [resultados, setResultados] = useState<Resultado[]>([])
   const [loading, setLoading] = useState(false)
   const [novaPalavra, setNovaPalavra] = useState('')
   const [aviso, setAviso] = useState('')
 
-  const cnm = CNM_TEMAS.map(t => ({ ...t, keywords: palavrasCnm[t.id] ?? t.keywords }))
-  const allTemas = [...cnm, ...customTemas]
+  const padrao = TEMAS_PADRAO.map(t => ({ ...t, keywords: palavrasPadrao[t.id] ?? t.keywords }))
+  const allTemas = [...padrao, ...customTemas]
   const ativo = allTemas.find(t => t.id === ativoId) ?? null
-  const isCnm = (id: string) => CNM_TEMAS.some(c => c.id === id)
+  const isPadrao = (id: string) => TEMAS_PADRAO.some(c => c.id === id)
 
-  useEffect(() => { setPalavrasCnm(lerPalavrasLocais()) }, [])
+  useEffect(() => { setPalavrasPadrao(lerPalavrasLocais()) }, [])
 
   // Busca de novo sempre que o tema ativo ou as palavras dele mudam.
   const chaveBusca = ativo ? `${ativo.id}|${ativo.keywords.join('|')}` : ''
@@ -77,9 +77,9 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
   async function salvarPalavras(tema: Tema, keywords: string[]) {
     setAviso('')
     if (!keywords.length) { setAviso('O tema precisa de pelo menos uma palavra-chave.'); return }
-    if (isCnm(tema.id)) {
-      const novo = { ...palavrasCnm, [tema.id]: keywords }
-      setPalavrasCnm(novo)
+    if (isPadrao(tema.id)) {
+      const novo = { ...palavrasPadrao, [tema.id]: keywords }
+      setPalavrasPadrao(novo)
       salvarPalavrasLocais(novo)
       return
     }
@@ -110,9 +110,9 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
 
   function restaurarPadrao() {
     if (!ativo) return
-    const { [ativo.id]: _removido, ...resto } = palavrasCnm
+    const { [ativo.id]: _removido, ...resto } = palavrasPadrao
     void _removido
-    setPalavrasCnm(resto)
+    setPalavrasPadrao(resto)
     salvarPalavrasLocais(resto)
   }
 
@@ -140,7 +140,7 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
     if (!confirm('Remover este tema monitorado?')) return
     await fetch('/api/temas', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setCustomTemas(prev => prev.filter(t => t.id !== id))
-    if (ativoId === id) setAtivoId(CNM_TEMAS[0].id)
+    if (ativoId === id) setAtivoId(TEMAS_PADRAO[0].id)
   }
 
   return (
@@ -159,7 +159,7 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {allTemas.map(t => {
           const cls = COR_MAP[t.cor] ?? COR_MAP.blue
-          const isCustom = !isCnm(t.id)
+          const isCustom = !isPadrao(t.id)
           const isAtivo = ativoId === t.id
           return (
             <div key={t.id} onClick={() => setAtivoId(t.id)}
@@ -169,7 +169,7 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
                   <span className="text-2xl">{t.emoji}</span>
                   <div>
                     <h3 className="text-sm font-semibold text-gray-800">{t.nome}</h3>
-                    <span className="text-xs text-gray-400">{isCustom ? 'Personalizado' : 'CNM'}</span>
+                    {isCustom && <span className="text-xs text-gray-400">Personalizado</span>}
                   </div>
                 </div>
                 {isCustom && (
@@ -193,14 +193,13 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
       {ativo && (() => {
         const cls = COR_MAP[ativo.cor] ?? COR_MAP.blue
         const chip = cls.split(' ').slice(0, 3).join(' ')
-        const editado = isCnm(ativo.id) && palavrasCnm[ativo.id] !== undefined
+        const editado = isPadrao(ativo.id) && palavrasPadrao[ativo.id] !== undefined
         return (
           <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
             <div>
               <h3 className="text-sm font-semibold text-gray-700">{ativo.emoji} {ativo.nome}: palavras-chave do filtro</h3>
               <p className="text-xs text-gray-400 mt-0.5">
                 Mostramos as proposições da Câmara apresentadas nos últimos 12 meses que contêm qualquer uma destas palavras.
-                {isCnm(ativo.id) && ' Mudanças nos temas CNM ficam salvas neste navegador.'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 items-center">

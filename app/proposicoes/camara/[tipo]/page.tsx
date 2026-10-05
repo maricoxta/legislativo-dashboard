@@ -1,8 +1,8 @@
 import { ProposicaoCamara } from '@/types/camara'
 import { BillCard } from '@/components/proposicoes/BillCard'
 import { ProposicaoFilters } from '@/components/proposicoes/Filters'
-import { listarCamaraPorCodigos, listarProposicoesCamara, ListaCamara } from '@/lib/server/camara'
-import { codigosDoStatusCamara } from '@/lib/server/indicadores'
+import { listarProposicoesCamara, listarSituacaoCamara, ListaCamara } from '@/lib/server/camara'
+import { filtroStatusCamara } from '@/lib/server/indicadores'
 import { CAMARA_TEMAS, TIPO_SIGLAS } from '@/lib/config'
 import { STATUS_PL, isStatusPL } from '@/lib/situacoes'
 
@@ -29,7 +29,7 @@ export default async function CamaraListPage({ params, searchParams }: Props) {
 
   const page = parseInt(sp.pagina ?? '1') || 1
   // ?status= vem dos cards do dashboard: filtra pelos códigos de situação do grupo.
-  const status = !isTema && isStatusPL(sp.status) ? sp.status : null
+  const status = tipo === 'PL' && isStatusPL(sp.status) ? sp.status : null
   let bills: ProposicaoCamara[] = []
   let totalPages = 1
   let erro = false
@@ -38,10 +38,11 @@ export default async function CamaraListPage({ params, searchParams }: Props) {
   if (status) {
     try {
       const ano = Number(sp.ano) || new Date().getFullYear()
-      const todas = await listarCamaraPorCodigos(tipo, ano, await codigosDoStatusCamara(status))
-      totalStatus = todas.length
-      totalPages = Math.max(1, Math.ceil(todas.length / POR_PAGINA))
-      bills = todas.slice((page - 1) * POR_PAGINA, page * POR_PAGINA)
+      // Só PLs têm situação carregada (tabela camara_pl_situacao).
+      const r = await listarSituacaoCamara(filtroStatusCamara(ano, status), page, POR_PAGINA)
+      bills = r.dados
+      totalStatus = r.total
+      totalPages = Math.max(1, Math.ceil(r.total / POR_PAGINA))
     } catch { erro = true }
   } else {
     let data: ListaCamara = { dados: [] }

@@ -105,6 +105,17 @@ create policy "own rows" on proposicoes_salvas using (user_id = auth.uid());
 create policy "own rows" on historico_buscas   using (user_id = auth.uid());
 ```
 
+### Situação dos PLs da Câmara (job diário)
+
+A API da Câmara não filtra proposições por situação. Os indicadores e as listas
+por status da Câmara leem a tabela `camara_pl_situacao`, carregada todo dia pelo
+workflow `.github/workflows/camara-situacao.yml` (script `jobs/camara_situacao.py`)
+a partir do arquivo anual `proposicoes-{ano}.csv` da Câmara.
+
+1. Rode `supabase/migrations/20261005_camara_pl_situacao.sql` no SQL Editor do Supabase.
+2. Em GitHub → Settings → Secrets and variables → Actions, crie `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`.
+3. Na aba Actions, rode "Situação dos PLs da Câmara" uma vez (depois ele roda sozinho às 6h).
+
 ### Iniciar
 
 ```bash

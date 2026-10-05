@@ -1,4 +1,4 @@
-import { codigosSituacaoCamara, contarCamara, contarCamaraPorCodigos } from '@/lib/server/camara'
+import { contarSituacaoCamara, FiltroSituacao } from '@/lib/server/camara'
 import { processosDoAno } from '@/lib/server/senado'
 import { COD_CAMARA_ENCERRADAS, StatusPL, codigosCamara, statusSenado } from '@/lib/situacoes'
 
@@ -11,28 +11,24 @@ export const INDICADORES_VAZIOS: IndicadoresCasa = {
 
 const ok = <T,>(r: PromiseSettledResult<T>) => (r.status === 'fulfilled' ? r.value : null)
 
-// Códigos de situação da Câmara para um status. "tramitando" = todos os
-// códigos da referência menos os que encerram a tramitação.
-export async function codigosDoStatusCamara(s: StatusPL): Promise<number[]> {
-  if (s !== 'tramitando') return codigosCamara(s)
-  const todos = await codigosSituacaoCamara()
-  return todos.filter(c => !COD_CAMARA_ENCERRADAS.includes(c))
+// Filtro da tabela camara_pl_situacao para um status. "tramitando" = todos
+// os PLs menos os que estão numa situação que encerra a tramitação.
+export function filtroStatusCamara(ano: number, s?: StatusPL): FiltroSituacao {
+  if (!s) return { ano }
+  if (s === 'tramitando') return { ano, excluir: COD_CAMARA_ENCERRADAS }
+  return { ano, codigos: codigosCamara(s) }
 }
 
 async function indicadoresCamara(ano: number): Promise<IndicadoresCasa> {
-  const total = await contarCamara('PL', ano)
-  const contar = (s: Exclude<StatusPL, 'tramitando'>) => contarCamaraPorCodigos('PL', ano, codigosCamara(s), total)
-
-  const [aprovados, vetados, naoAprovados, encerradas] = await Promise.allSettled([
-    contar('aprovados'),
-    contar('vetados'),
-    contar('nao-aprovados'),
-    contarCamaraPorCodigos('PL', ano, COD_CAMARA_ENCERRADAS, total),
+  const contar = (s?: StatusPL) => contarSituacaoCamara(filtroStatusCamara(ano, s))
+  const [total, tramitando, aprovados, vetados, naoAprovados] = await Promise.allSettled([
+    contar(), contar('tramitando'), contar('aprovados'), contar('vetados'), contar('nao-aprovados'),
   ])
-  const enc = ok(encerradas)
+  // Tabela vazia = o job ainda não rodou: melhor "—" do que zeros.
+  if (!ok(total)) return INDICADORES_VAZIOS
   return {
-    total,
-    tramitando: enc === null ? null : Math.max(total - enc, 0),
+    total: ok(total),
+    tramitando: ok(tramitando),
     aprovados: ok(aprovados),
     vetados: ok(vetados),
     'nao-aprovados': ok(naoAprovados),

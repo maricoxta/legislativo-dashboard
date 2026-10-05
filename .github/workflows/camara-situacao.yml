@@ -1,0 +1,28 @@
+name: Situação dos PLs da Câmara
+
+# Todo dia às 6h (Brasília) carrega a situação atual dos PLs da Câmara
+# no Supabase. Também pode ser disparado à mão na aba Actions.
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      ano:
+        description: 'Ano dos PLs (vazio = ano corrente)'
+        required: false
+
+jobs:
+  carregar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Carregar situação dos PLs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANO: ${{ inputs.ano }}
+        run: python jobs/camara_situacao.py $ANO

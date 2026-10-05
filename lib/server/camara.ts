@@ -1,4 +1,5 @@
 import { getCached, setCache } from '@/lib/cache'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { CAMARA_API } from '@/lib/config'
 import { ProposicaoCamara } from '@/types/camara'
 
@@ -24,55 +25,61 @@ export async function listarProposicoesCamara(params: URLSearchParams): Promise<
   return data
 }
 
-const CACHE_HORA = { headers: { Accept: 'application/json' }, next: { revalidate: 3600 } }
-
-async function getJSON(url: string) {
-  const res = await fetch(url, CACHE_HORA)
-  if (!res.ok) throw new Error(`HTTP ${res.status} em ${url}`)
-  return res.json()
+// ---------- Situação dos PLs (tabela camara_pl_situacao) ----------
+// A API da Câmara ignora o filtro codSituacao, então a situação de cada PL
+// vem da tabela que o job jobs/camara_situacao.py carrega todo dia.
+export interface FiltroSituacao {
+  ano: number
+  codigos?: number[] // só estas situações
+  excluir?: number[] // todas menos estas
 }
 
-// Executa as tarefas com no máximo `n` requisições ao mesmo tempo.
-async function emLotes<T, R>(itens: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = []
-  for (let i = 0; i < itens.length; i += n) out.push(...(await Promise.all(itens.slice(i, i + n).map(fn))))
-  return out
+export interface LinhaSituacaoCamara {
+  id: number
+  sigla_tipo: string
+  numero: number
+  ano: number
+  ementa: string | null
+  data_apresentacao: string | null
+  cod_situacao: number | null
+  descricao_situacao: string | null
+  data_situacao: string | null
+  sigla_orgao: string | null
 }
 
-// A API não traz contagens prontas. Pedimos 1 item por página: o número da
-// última página (links.last) é o total de registros do filtro.
-export async function contarCamara(siglaTipo: string, ano: number, codSituacao?: number): Promise<number> {
-  const qs = new URLSearchParams({ siglaTipo, ano: String(ano), itens: '1' })
-  if (codSituacao !== undefined) qs.set('codSituacao', String(codSituacao))
-  const d = await getJSON(`${CAMARA_API}/proposicoes?${qs}`)
-  const last = (d.links ?? []).find((l: { rel: string }) => l.rel === 'last')
-  if (!last) return (d.dados ?? []).length
-  return Number(new URL(last.href).searchParams.get('pagina')) || 0
+function consultaSituacao(f: FiltroSituacao, colunas: string, opcoes: { count: 'exact'; head?: boolean }) {
+  const supabase = createAdminClient()
+  if (!supabase) throw new Error('Supabase não configurado')
+  let q = supabase.from('camara_pl_situacao').select(colunas, opcoes).eq('sigla_tipo', 'PL').eq('ano', f.ano)
+  if (f.codigos) q = q.in('cod_situacao', f.codigos)
+  // "excluir" mantém os PLs sem código de situação (ainda em tramitação).
+  if (f.excluir) q = q.or(`cod_situacao.is.null,cod_situacao.not.in.(${f.excluir.join(',')})`)
+  return q
 }
 
-// Soma as contagens de cada código de situação, um código por requisição.
-// Se algum código devolver o total do ano, a API ignorou o filtro: preferimos
-// não mostrar número a mostrar um número errado.
-export async function contarCamaraPorCodigos(siglaTipo: string, ano: number, codigos: number[], total: number): Promise<number> {
-  const parciais = await emLotes(codigos, 6, c => contarCamara(siglaTipo, ano, c))
-  if (total > 10 && parciais.some(n => n >= total)) throw new Error('A API da Câmara ignorou o filtro codSituacao')
-  return parciais.reduce((a, b) => a + b, 0)
+export async function contarSituacaoCamara(f: FiltroSituacao): Promise<number> {
+  const { count, error } = await consultaSituacao(f, 'id', { count: 'exact', head: true })
+  if (error) throw new Error(error.message)
+  return count ?? 0
 }
 
-export async function codigosSituacaoCamara(): Promise<number[]> {
-  const ref = await getJSON(`${CAMARA_API}/referencias/proposicoes/codSituacao`)
-  return (ref.dados ?? []).map((s: { cod: string | number }) => Number(s.cod)).filter((n: number) => !isNaN(n))
-}
-
-// Lista as proposições do ano em um conjunto de situações: até 100 por código
-// (as mais recentes), juntas e ordenadas da mais nova para a mais antiga.
-export async function listarCamaraPorCodigos(siglaTipo: string, ano: number, codigos: number[]): Promise<ProposicaoCamara[]> {
-  const lotes = await emLotes(codigos, 6, async c => {
-    const qs = new URLSearchParams({ siglaTipo, ano: String(ano), codSituacao: String(c), itens: '100', ordem: 'DESC', ordenarPor: 'id' })
-    const d = await getJSON(`${CAMARA_API}/proposicoes?${qs}`)
-    return (d.dados ?? []) as ProposicaoCamara[]
-  })
-  const vistos = new Map<number, ProposicaoCamara>()
-  for (const p of lotes.flat()) vistos.set(p.id, p)
-  return [...vistos.values()].sort((a, b) => b.id - a.id)
+export async function listarSituacaoCamara(f: FiltroSituacao, pagina: number, porPagina: number) {
+  const inicio = (pagina - 1) * porPagina
+  const { data, count, error } = await consultaSituacao(f, '*', { count: 'exact' })
+    .order('id', { ascending: false })
+    .range(inicio, inicio + porPagina - 1)
+  if (error) throw new Error(error.message)
+  const linhas = (data ?? []) as unknown as LinhaSituacaoCamara[]
+  const dados: ProposicaoCamara[] = linhas.map(l => ({
+    id: l.id,
+    siglaTipo: l.sigla_tipo,
+    numero: l.numero,
+    ano: l.ano,
+    ementa: l.ementa ?? '',
+    dataApresentacao: l.data_apresentacao ?? undefined,
+    statusProposicao: l.descricao_situacao
+      ? { descricaoSituacao: l.descricao_situacao, siglaOrgao: l.sigla_orgao ?? undefined, dataHora: l.data_situacao ?? undefined }
+      : undefined,
+  }))
+  return { dados, total: count ?? 0 }
 }

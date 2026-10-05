@@ -6,8 +6,9 @@ import { ProposicaoCamara } from '@/types/camara'
 // duas fontes somadas:
 // 1. a ementa dos PLs na tabela camara_pl_situacao (job diário);
 // 2. o parâmetro `keywords` da API, uma palavra por vez (só acha o que a
-//    Câmara já indexou). Sem data a API só olha 30 dias de tramitação, por
-//    isso pedimos o que foi apresentado nos últimos 12 meses.
+//    Câmara já indexou). Sem data a API só olha 30 dias de tramitação, e um
+//    intervalo de datas maior que 3 meses dá erro 400; por isso consultamos
+//    por ano (o corrente e o anterior).
 const POR_PALAVRA = 20
 const MAX_PALAVRAS = 15
 
@@ -15,25 +16,23 @@ export async function GET(req: NextRequest) {
   const palavras = [...new Set(req.nextUrl.searchParams.getAll('kw').map(k => k.trim()).filter(Boolean))].slice(0, MAX_PALAVRAS)
   if (!palavras.length) return NextResponse.json({ dados: [] })
 
-  const hoje = new Date()
-  const umAnoAtras = new Date(hoje.getTime() - 365 * 864e5)
-  const iso = (d: Date) => d.toISOString().slice(0, 10)
+  const anoAtual = new Date().getFullYear()
+  const anos = [anoAtual, anoAtual - 1]
 
-  const resultados = await Promise.allSettled(palavras.map(kw =>
+  const resultados = await Promise.allSettled(palavras.flatMap(kw => anos.map(ano =>
     listarProposicoesCamara(new URLSearchParams({
       keywords: kw,
-      dataApresentacaoInicio: iso(umAnoAtras),
-      dataApresentacaoFim: iso(hoje),
+      ano: String(ano),
       itens: String(POR_PALAVRA),
       ordem: 'DESC',
       ordenarPor: 'id',
     })).then(r => ({ kw, dados: r.dados ?? [] }))
-  ))
+  )))
 
   const porId = new Map<number, { bill: ProposicaoCamara; palavras: string[] }>()
 
   const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  const naEmenta = await buscarEmentaCamara(palavras, iso(umAnoAtras)).catch(() => [])
+  const naEmenta = await buscarEmentaCamara(palavras, `${anoAtual - 1}-01-01`).catch(() => [])
   for (const bill of naEmenta) {
     const ementa = semAcento(bill.ementa)
     porId.set(bill.id, { bill, palavras: palavras.filter(p => ementa.includes(semAcento(p))) })

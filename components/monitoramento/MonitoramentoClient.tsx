@@ -199,7 +199,7 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
             <div>
               <h3 className="text-sm font-semibold text-gray-700">{ativo.emoji} {ativo.nome}: palavras-chave do filtro</h3>
               <p className="text-xs text-gray-400 mt-0.5">
-                Mostramos as proposições da Câmara apresentadas nos últimos 12 meses que contêm qualquer uma destas palavras.
+                Mostramos as proposições da Câmara deste ano e do anterior que contêm qualquer uma destas palavras.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
@@ -235,7 +235,7 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
                         <BillCard bill={r.bill} />
                       </div>
                     ))}</div>
-                  : <p className="text-sm text-gray-400 text-center py-8">Nenhuma proposição dos últimos 12 meses com estas palavras-chave.</p>}
+                  : <p className="text-sm text-gray-400 text-center py-8">Nenhuma proposição deste ano ou do anterior com estas palavras-chave.</p>}
             </div>
           </div>
         )

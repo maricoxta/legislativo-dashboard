@@ -11,6 +11,9 @@ export interface EventoAgenda {
   descricao: string
   local: string
   url?: string
+  finalidade?: string
+  observacoes?: string
+  requerimentos?: string[] // ex.: "REQ 52/2026 - CDH - Senadora Damares Alves"
 }
 
 const REVALIDATE = { next: { revalidate: 600 } }
@@ -44,6 +47,22 @@ async function agendaCamara(inicio: string, fim: string): Promise<EventoAgenda[]
   }))
 }
 
+interface DocumentoRelacionado {
+  doma?: { identificacao?: string; autoria?: string }
+}
+
+interface ParteReuniao {
+  descricaoTipo?: string
+  nome?: string
+  // Partes não deliberativas (audiências) trazem o evento com finalidade,
+  // observações e os requerimentos que pediram a reunião.
+  evento?: {
+    finalidade?: string
+    observacoes?: string
+    domasRelacionados?: DocumentoRelacionado | DocumentoRelacionado[]
+  }
+}
+
 interface ReuniaoSenado {
   codigo?: string
   titulo?: string
@@ -52,8 +71,11 @@ interface ReuniaoSenado {
   situacao?: string
   colegiadoCriador?: { sigla?: string }
   tipo?: { descricao?: string }
-  partes?: { descricaoTipo?: string; nome?: string } | { descricaoTipo?: string; nome?: string }[]
+  partes?: ParteReuniao | ParteReuniao[]
 }
+
+const juntar = (textos: (string | undefined)[], sep: string) =>
+  [...new Set(textos.map(t => t?.trim()).filter(Boolean))].join(sep) || undefined
 
 // Reuniões de comissão (inclui audiências públicas). Consultamos semana a semana
 // para manter cada resposta pequena.
@@ -69,7 +91,13 @@ async function agendaComissoesSenado(inicio: string, fim: string): Promise<Event
       .catch(() => [] as ReuniaoSenado[])
   ))
   return lotes.flat().map(r => {
-    const partes = asArray(r.partes).map(p => p.descricaoTipo ?? p.nome).filter(Boolean)
+    const todasPartes = asArray(r.partes)
+    const partes = todasPartes.map(p => p.descricaoTipo ?? p.nome).filter(Boolean)
+    const eventos = todasPartes.map(p => p.evento).filter(e => e !== undefined)
+    const requerimentos = eventos
+      .flatMap(e => asArray(e.domasRelacionados))
+      .map(d => d.doma && [d.doma.identificacao, d.doma.autoria].filter(Boolean).join(' - '))
+      .filter((t): t is string => !!t)
     return {
       casa: 'senado',
       data: (r.dataInicio ?? '').slice(0, 10),
@@ -79,6 +107,9 @@ async function agendaComissoesSenado(inicio: string, fim: string): Promise<Event
       descricao: [r.titulo, r.situacao && r.situacao !== 'Agendada' ? `(${r.situacao})` : ''].filter(Boolean).join(' '),
       local: r.local ?? '',
       url: r.codigo ? `https://legis.senado.leg.br/comissoes/reuniao?reuniao=${r.codigo}` : undefined,
+      finalidade: juntar(eventos.map(e => e.finalidade), ' / '),
+      observacoes: juntar(eventos.map(e => e.observacoes), ' '),
+      requerimentos: requerimentos.length ? [...new Set(requerimentos)] : undefined,
     } satisfies EventoAgenda
   })
 }

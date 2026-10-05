@@ -58,6 +58,22 @@ export default async function AgendaPage() {
                         </div>
                         <p className="text-sm text-gray-800 leading-snug">{e.descricao || '—'}</p>
                         {e.local && <p className="text-xs text-gray-400 mt-0.5">📍 {e.local}</p>}
+                        {(e.finalidade || e.observacoes || e.requerimentos) && (
+                          <dl className="mt-2 space-y-1.5 text-xs text-gray-600">
+                            {e.finalidade && (
+                              <div><dt className="font-semibold text-gray-700">Finalidade</dt><dd>{e.finalidade}</dd></div>
+                            )}
+                            {e.observacoes && (
+                              <div><dt className="font-semibold text-gray-700">Observações</dt><dd>{e.observacoes}</dd></div>
+                            )}
+                            {e.requerimentos && (
+                              <div>
+                                <dt className="font-semibold text-gray-700">Requerimento(s) relacionado(s)</dt>
+                                {e.requerimentos.map(r => <dd key={r}>{r}</dd>)}
+                              </div>
+                            )}
+                          </dl>
+                        )}
                       </div>
                       {e.url && (
                         <a href={e.url} target="_blank" className="text-xs text-blue-600 hover:underline shrink-0">Ver</a>

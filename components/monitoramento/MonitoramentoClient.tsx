@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { BillCard } from '@/components/proposicoes/BillCard'
+import { SenadoCard } from '@/components/proposicoes/SenadoCard'
+import type { ResultadoMonitoramento } from '@/types/monitoramento'
 import { CardSkeleton } from '@/components/ui/Skeleton'
-import { ProposicaoCamara } from '@/types/camara'
 
 interface Tema {
   id: string
@@ -25,10 +26,7 @@ const COR_MAP: Record<string, string> = {
   purple: 'bg-purple-50 text-purple-700 border-purple-200 ring-purple-500',
 }
 
-interface Resultado {
-  bill: ProposicaoCamara
-  palavras: string[] // palavras-chave do tema que encontraram a proposição
-}
+type Resultado = ResultadoMonitoramento
 
 // Os temas padrão são fixos no código; as palavras que o usuário muda neles
 // ficam neste navegador. Temas personalizados são salvos no Supabase.
@@ -199,7 +197,7 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
             <div>
               <h3 className="text-sm font-semibold text-gray-700">{ativo.emoji} {ativo.nome}: palavras-chave do filtro</h3>
               <p className="text-xs text-gray-400 mt-0.5">
-                Mostramos as proposições da Câmara deste ano e do anterior que contêm qualquer uma destas palavras.
+                Mostramos as proposições da Câmara e os projetos de lei do Senado, deste ano e do anterior, que contêm qualquer uma destas palavras.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
@@ -230,9 +228,11 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
                 ? <div className="space-y-3">{[...Array(3)].map((_, i) => <CardSkeleton key={i} />)}</div>
                 : resultados.length
                   ? <div className="space-y-2">{resultados.map(r => (
-                      <div key={r.bill.id}>
-                        <p className="text-xs text-gray-400 mb-1">Encontrada por: {r.palavras.join(', ')}</p>
-                        <BillCard bill={r.bill} />
+                      <div key={r.casa === 'camara' ? `c${r.bill.id}` : `s${r.processo.id}`}>
+                        <p className="text-xs text-gray-400 mb-1">
+                          {r.casa === 'camara' ? 'Câmara' : 'Senado'} · encontrada por: {r.palavras.join(', ')}
+                        </p>
+                        {r.casa === 'camara' ? <BillCard bill={r.bill} /> : <SenadoCard processo={r.processo} />}
                       </div>
                     ))}</div>
                   : <p className="text-sm text-gray-400 text-center py-8">Nenhuma proposição deste ano ou do anterior com estas palavras-chave.</p>}

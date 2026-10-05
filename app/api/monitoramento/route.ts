@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buscarEmentaCamara, listarProposicoesCamara } from '@/lib/server/camara'
+import { processosDoAno } from '@/lib/server/senado'
 import { ProposicaoCamara } from '@/types/camara'
+import { ResultadoMonitoramento } from '@/types/monitoramento'
 
 // Proposições da Câmara que batem com QUALQUER palavra-chave do tema, de
 // duas fontes somadas:
@@ -9,6 +11,10 @@ import { ProposicaoCamara } from '@/types/camara'
 //    Câmara já indexou). Sem data a API só olha 30 dias de tramitação, e um
 //    intervalo de datas maior que 3 meses dá erro 400; por isso consultamos
 //    por ano (o corrente e o anterior).
+// No Senado, /processo não busca por palavra: carregamos os PLs dos dois
+// anos (mesma varredura em cache dos indicadores) e procuramos na ementa.
+
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 const POR_PALAVRA = 20
 const MAX_PALAVRAS = 15
 
@@ -31,7 +37,6 @@ export async function GET(req: NextRequest) {
 
   const porId = new Map<number, { bill: ProposicaoCamara; palavras: string[] }>()
 
-  const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
   const naEmenta = await buscarEmentaCamara(palavras, `${anoAtual - 1}-01-01`).catch(() => [])
   for (const bill of naEmenta) {
     const ementa = semAcento(bill.ementa)
@@ -47,7 +52,21 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const dados = [...porId.values()].sort((a, b) => b.bill.id - a.bill.id)
-  const falhas = resultados.filter(r => r.status === 'rejected').length
+  const senado = await Promise.allSettled(anos.map(ano => processosDoAno('PL', ano)))
+  const doSenado: ResultadoMonitoramento[] = senado
+    .flatMap(r => (r.status === 'fulfilled' ? r.value : []))
+    .map(processo => {
+      const ementa = semAcento(processo.ementa ?? '')
+      return { casa: 'senado' as const, processo, palavras: palavras.filter(p => ementa.includes(semAcento(p))) }
+    })
+    .filter(r => r.palavras.length)
+
+  const data = (r: ResultadoMonitoramento) => (r.casa === 'camara' ? r.bill.dataApresentacao : r.processo.dataApresentacao) ?? ''
+  const dados: ResultadoMonitoramento[] = [
+    ...[...porId.values()].map(v => ({ casa: 'camara' as const, ...v })),
+    ...doSenado,
+  ].sort((a, b) => data(b).localeCompare(data(a)))
+
+  const falhas = [...resultados, ...senado].filter(r => r.status === 'rejected').length
   return NextResponse.json({ dados, falhas })
 }

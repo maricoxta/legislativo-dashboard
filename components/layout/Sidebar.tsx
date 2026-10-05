@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 
 const NAV = [
   { href: '/', label: 'Dashboard', icon: <rect x="3" y="3" width="7" height="7"/>, icon2: <><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></> },
+  { href: '/entenda', label: 'Entenda o Processo' },
   { href: '/busca', label: 'Busca Avançada' },
   { href: '/monitoramento', label: 'Monitoramento por Temas' },
   { href: '/agenda', label: 'Agenda Legislativa' },

@@ -113,6 +113,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           emoji="📜"
           sub="PLs que viraram lei no ano, apresentados em qualquer ano"
           color="indigo"
+          href={`/proposicoes/camara/PL?leis=${year}`}
         />
       </div>
 

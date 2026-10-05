@@ -110,18 +110,33 @@ export async function buscarEmentaCamara(palavras: string[], desde: string, limi
 // PLs que viraram lei dentro do ano, apresentados em qualquer ano. A data é
 // a do último andamento, que para quem virou lei é a da transformação em
 // norma. Inclui projetos vindos do Senado, que ganham número na Câmara.
-export async function leisSancionadasNoAno(ano: number): Promise<number> {
+function consultaLeisDoAno(ano: number, colunas: string, opcoes: { count: 'exact'; head?: boolean }) {
   const supabase = createAdminClient()
   if (!supabase) throw new Error('Supabase não configurado')
-  const { count, error, status } = await supabase
+  return supabase
     .from('camara_pl_situacao')
-    .select('id', { count: 'exact', head: true })
+    .select(colunas, opcoes)
     .eq('sigla_tipo', 'PL')
     .in('cod_situacao', COD_CAMARA.lei)
     .gte('data_situacao', `${ano}-01-01`)
     .lt('data_situacao', `${ano + 1}-01-01`)
+}
+
+export async function leisSancionadasNoAno(ano: number): Promise<number> {
+  const { count, error, status } = await consultaLeisDoAno(ano, 'id', { count: 'exact', head: true })
   if (error) throw new Error([`HTTP ${status}`, error.message].filter(Boolean).join(' — '))
   return count ?? 0
+}
+
+// Lista das leis do ano, da mais recente para a mais antiga.
+export async function listarLeisDoAno(ano: number, pagina: number, porPagina: number) {
+  const inicio = (pagina - 1) * porPagina
+  const { data, count, error } = await consultaLeisDoAno(ano, '*', { count: 'exact' })
+    .order('data_situacao', { ascending: false })
+    .range(inicio, inicio + porPagina - 1)
+  if (error) throw new Error(error.message)
+  const dados = ((data ?? []) as unknown as LinhaSituacaoCamara[]).map(paraProposicao)
+  return { dados, total: count ?? 0 }
 }
 
 // PLs apresentados em cada mês do ano (12 contagens, uma por mês).

@@ -1,21 +1,14 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 
-export function Topbar({ userEmail }: { userEmail?: string | null }) {
+export function Topbar() {
   const router = useRouter()
   const [q, setQ] = useState('')
   function handleSearch(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && q.trim()) {
       router.push(`/busca?q=${encodeURIComponent(q.trim())}`)
     }
-  }
-
-  async function signOut() {
-    const supabase = createClient()
-    if (supabase) await supabase.auth.signOut()
-    router.refresh()
   }
 
   return (
@@ -29,18 +22,6 @@ export function Topbar({ userEmail }: { userEmail?: string | null }) {
           placeholder="Buscar proposição, ementa, tema..."
           className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-      </div>
-      <div className="ml-auto flex items-center gap-3">
-        {userEmail ? (
-          <>
-            <span className="text-xs text-gray-500 hidden sm:block">{userEmail}</span>
-            <button onClick={signOut} className="text-xs text-gray-500 hover:text-gray-800 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-              Sair
-            </button>
-          </>
-        ) : (
-          <a href="/auth/login" className="text-xs text-blue-600 hover:underline font-medium">Entrar</a>
-        )}
       </div>
     </header>
   )

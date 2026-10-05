@@ -28,20 +28,21 @@ const COR_MAP: Record<string, string> = {
 
 type Resultado = ResultadoMonitoramento
 
-// Os temas padrão são fixos no código; as palavras que o usuário muda neles
-// ficam neste navegador. Temas personalizados são salvos no Supabase.
-const CHAVE_LOCAL = 'monitoramento:palavras-padrao'
+// O site não tem login: as palavras alteradas nos temas padrão e os temas
+// criados pelo usuário ficam salvos neste navegador.
+const CHAVE_PALAVRAS = 'monitoramento:palavras-padrao'
+const CHAVE_TEMAS = 'monitoramento:temas'
 
-function lerPalavrasLocais(): Record<string, string[]> {
-  try { return JSON.parse(localStorage.getItem(CHAVE_LOCAL) ?? '{}') } catch { return {} }
+function ler<T>(chave: string, vazio: T): T {
+  try { return JSON.parse(localStorage.getItem(chave) ?? '') ?? vazio } catch { return vazio }
 }
 
-function salvarPalavrasLocais(v: Record<string, string[]>) {
-  try { localStorage.setItem(CHAVE_LOCAL, JSON.stringify(v)) } catch {}
+function gravar(chave: string, v: unknown) {
+  try { localStorage.setItem(chave, JSON.stringify(v)) } catch {}
 }
 
-export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) {
-  const [customTemas, setCustomTemas] = useState<Tema[]>(initialTemas)
+export function MonitoramentoClient() {
+  const [customTemas, setCustomTemas] = useState<Tema[]>([])
   const [palavrasPadrao, setPalavrasPadrao] = useState<Record<string, string[]>>({})
   const [ativoId, setAtivoId] = useState<string>(TEMAS_PADRAO[0].id)
   const [resultados, setResultados] = useState<Resultado[]>([])
@@ -54,7 +55,15 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
   const ativo = allTemas.find(t => t.id === ativoId) ?? null
   const isPadrao = (id: string) => TEMAS_PADRAO.some(c => c.id === id)
 
-  useEffect(() => { setPalavrasPadrao(lerPalavrasLocais()) }, [])
+  useEffect(() => {
+    setPalavrasPadrao(ler(CHAVE_PALAVRAS, {}))
+    setCustomTemas(ler(CHAVE_TEMAS, []))
+  }, [])
+
+  function atualizarCustom(temas: Tema[]) {
+    setCustomTemas(temas)
+    gravar(CHAVE_TEMAS, temas)
+  }
 
   // Busca de novo sempre que o tema ativo ou as palavras dele mudam.
   const chaveBusca = ativo ? `${ativo.id}|${ativo.keywords.join('|')}` : ''
@@ -72,26 +81,16 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveBusca])
 
-  async function salvarPalavras(tema: Tema, keywords: string[]) {
+  function salvarPalavras(tema: Tema, keywords: string[]) {
     setAviso('')
     if (!keywords.length) { setAviso('O tema precisa de pelo menos uma palavra-chave.'); return }
     if (isPadrao(tema.id)) {
       const novo = { ...palavrasPadrao, [tema.id]: keywords }
       setPalavrasPadrao(novo)
-      salvarPalavrasLocais(novo)
+      gravar(CHAVE_PALAVRAS, novo)
       return
     }
-    const anterior = tema.keywords
-    setCustomTemas(prev => prev.map(t => (t.id === tema.id ? { ...t, keywords } : t)))
-    const res = await fetch('/api/temas', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: tema.id, keywords }),
-    })
-    if (!res.ok) {
-      setCustomTemas(prev => prev.map(t => (t.id === tema.id ? { ...t, keywords: anterior } : t)))
-      setAviso('Não foi possível salvar. Faça login para editar seus temas.')
-    }
+    atualizarCustom(customTemas.map(t => (t.id === tema.id ? { ...t, keywords } : t)))
   }
 
   function incluirPalavra() {
@@ -111,33 +110,24 @@ export function MonitoramentoClient({ initialTemas }: { initialTemas: Tema[] }) 
     const { [ativo.id]: _removido, ...resto } = palavrasPadrao
     void _removido
     setPalavrasPadrao(resto)
-    salvarPalavrasLocais(resto)
+    gravar(CHAVE_PALAVRAS, resto)
   }
 
-  async function addTema() {
+  function addTema() {
     const nome = prompt('Nome do tema:')
     if (!nome?.trim()) return
     const kw = prompt('Palavras-chave (separadas por vírgula):')
     if (!kw?.trim()) return
     const keywords = kw.split(',').map(k => k.trim()).filter(Boolean)
 
-    const res = await fetch('/api/temas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome: nome.trim(), emoji: '🔍', cor: 'purple', keywords }),
-    })
-    if (res.ok) {
-      const novo = await res.json()
-      setCustomTemas(prev => [novo, ...prev])
-    } else {
-      alert('Erro ao salvar tema. Faça login para usar esta funcionalidade.')
-    }
+    const novo: Tema = { id: `custom-${Date.now()}`, nome: nome.trim(), emoji: '🔍', cor: 'purple', keywords }
+    atualizarCustom([novo, ...customTemas])
+    setAtivoId(novo.id)
   }
 
-  async function removeTema(id: string) {
+  function removeTema(id: string) {
     if (!confirm('Remover este tema monitorado?')) return
-    await fetch('/api/temas', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    setCustomTemas(prev => prev.filter(t => t.id !== id))
+    atualizarCustom(customTemas.filter(t => t.id !== id))
     if (ativoId === id) setAtivoId(TEMAS_PADRAO[0].id)
   }
 

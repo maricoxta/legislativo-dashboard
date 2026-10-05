@@ -1,12 +1,11 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CAMARA_TEMAS } from '@/lib/config'
 
 const NAV = [
   { href: '/', label: 'Dashboard', icon: <rect x="3" y="3" width="7" height="7"/>, icon2: <><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></> },
   { href: '/busca', label: 'Busca Avançada' },
-  { href: '/monitoramento', label: 'Monitoramento' },
+  { href: '/monitoramento', label: 'Monitoramento por Temas' },
   { href: '/agenda', label: 'Agenda Legislativa' },
 ]
 
@@ -42,21 +41,6 @@ export function Sidebar() {
 
       <nav className="flex-1 p-3 overflow-y-auto space-y-1 text-sm">
         {NAV.map(n => <NavLink key={n.href} href={n.href} label={n.label} />)}
-
-        <div className="pt-3">
-          <div className="flex items-center gap-2 px-3 mb-1.5">
-            <div className="w-2 h-2 rounded-full bg-green-400" />
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Câmara</span>
-          </div>
-          <div className="space-y-0.5">
-            {CAMARA_TEMAS.slice(0, 8).map(t => (
-              <Link key={t.cod} href={`/proposicoes/camara/${t.cod}`}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-colors text-slate-300 text-xs truncate">
-                <span>{t.emoji}</span><span className="truncate">{t.nome}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
 
         <div className="pt-3">
           <div className="flex items-center gap-2 px-3 mb-1.5">

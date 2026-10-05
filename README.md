@@ -1,6 +1,6 @@
 # Legislativo BR
 
-Painel para acompanhamento de proposições legislativas da **Câmara dos Deputados** e do **Senado Federal**. Busque, filtre, salve favoritos e monitore temas de interesse em tempo real.
+Painel para acompanhamento de proposições legislativas da **Câmara dos Deputados** e do **Senado Federal**. Busque, filtre e monitore temas de interesse em tempo real.
 
 ---
 
@@ -13,7 +13,7 @@ Painel para acompanhamento de proposições legislativas da **Câmara dos Deputa
 | **Proposições Senado** | Mesma experiência para matérias do Senado |
 | **Busca avançada** | Filtros combinados; histórico salvo automaticamente para usuários logados |
 | **Detalhes** | Drawer lateral com tramitações, autores, relatores e votações sem sair da página |
-| **Monitoramento** | Crie alertas por palavras-chave; temas persistem na conta Supabase |
+| **Monitoramento por Temas** | Proposições da Câmara e do Senado por palavras-chave; temas e palavras ficam salvos no navegador |
 | **Agenda** | Próximos eventos e votações das comissões |
 
 ---
@@ -22,7 +22,7 @@ Painel para acompanhamento de proposições legislativas da **Câmara dos Deputa
 
 - **Next.js 16** (App Router, Server Components, API Routes)
 - **TypeScript 5** + **Tailwind CSS v4**
-- **Supabase** — auth (email + Google OAuth), PostgreSQL, cache de API
+- **Supabase** — PostgreSQL (cache de API e situação dos PLs da Câmara)
 - **Recharts** para visualizações
 - **React 19**
 
@@ -54,55 +54,17 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-> Sem Supabase configurado o app abre normalmente — dashboard, busca e proposições funcionam. Auth, monitoramento e favoritos ficam desabilitados.
+> Sem Supabase configurado o app abre normalmente; só os indicadores e as listas por situação da Câmara ficam sem dados.
 
 ### Banco de dados (Supabase SQL Editor)
 
 ```sql
-create table temas_monitorados (
-  id         uuid default gen_random_uuid() primary key,
-  user_id    uuid references auth.users not null,
-  nome       text not null,
-  emoji      text default '🔍',
-  cor        text default 'blue',
-  keywords   text[] not null,
-  created_at timestamptz default now()
-);
-
-create table proposicoes_salvas (
-  id            uuid default gen_random_uuid() primary key,
-  user_id       uuid references auth.users not null,
-  proposicao_id text not null,
-  source        text check (source in ('camara','senado')) not null,
-  sigla         text not null,
-  ementa        text,
-  saved_at      timestamptz default now(),
-  unique(user_id, proposicao_id)
-);
-
 create table api_cache (
   cache_key  text primary key,
   data       jsonb not null,
   expires_at timestamptz not null,
   created_at timestamptz default now()
 );
-
-create table historico_buscas (
-  id              uuid default gen_random_uuid() primary key,
-  user_id         uuid references auth.users not null,
-  termo           text not null,
-  filtros         jsonb,
-  resultado_count integer,
-  searched_at     timestamptz default now()
-);
-
-alter table temas_monitorados  enable row level security;
-alter table proposicoes_salvas enable row level security;
-alter table historico_buscas   enable row level security;
-
-create policy "own rows" on temas_monitorados  using (user_id = auth.uid());
-create policy "own rows" on proposicoes_salvas using (user_id = auth.uid());
-create policy "own rows" on historico_buscas   using (user_id = auth.uid());
 ```
 
 ### Situação dos PLs da Câmara (job diário)

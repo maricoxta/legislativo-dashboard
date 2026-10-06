@@ -11,7 +11,7 @@ function cliente() {
   return supabase
 }
 
-// Contagem pelo tema principal de cada PL, para que a soma dê o total do ano.
+// Contagem por tema em qualquer posição de `temas`; um PL com vários temas entra em vários.
 export async function contagemPorTema(ano: number): Promise<ContagemTema[]> {
   const { data, error } = await cliente().from('pl_temas_contagem').select('*').eq('ano', ano)
   if (error) throw new Error(error.message)

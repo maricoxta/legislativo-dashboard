@@ -67,7 +67,10 @@ export default async function TemasPage({ searchParams }: { searchParams: Promis
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Proposições por Tema</h1>
-          <p className="text-sm text-slate-500">Projetos de lei apresentados em {ano} na Câmara e no Senado, pelo tema principal</p>
+          <p className="text-sm text-slate-500">
+            Projetos de lei apresentados em {ano} na Câmara e no Senado. Um projeto pode ter mais de um tema e aparece
+            em cada um deles, por isso a soma dos cards passa do total de projetos.
+          </p>
         </div>
         <SeletorAno ano={ano} href={x => `/temas?ano=${x}`} />
       </div>

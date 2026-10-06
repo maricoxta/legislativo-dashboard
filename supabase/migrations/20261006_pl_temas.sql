@@ -22,11 +22,11 @@ create table if not exists pl_temas (
 create index if not exists pl_temas_ano_tema on pl_temas (ano, tema_principal);
 create index if not exists pl_temas_temas on pl_temas using gin (temas);
 
--- Quantos PLs de cada Casa e ano têm cada tema como principal (gráficos).
+-- Quantos PLs de cada Casa e ano têm cada tema, em qualquer posição (gráficos).
 create or replace view pl_temas_contagem as
-  select casa, ano, tema_principal as tema, origem, count(*)::int as total
-  from pl_temas
-  group by casa, ano, tema_principal, origem;
+  select casa, ano, t.tema, origem, count(*)::int as total
+  from pl_temas, unnest(temas) as t(tema)
+  group by casa, ano, t.tema, origem;
 
 -- Uma linha por execução do job: desempenho de M1 e M2 no ano de teste.
 create table if not exists classificacao_avaliacao (

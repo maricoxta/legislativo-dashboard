@@ -7,6 +7,7 @@ import { DashboardCharts } from '@/components/dashboard/Charts'
 import { diagnosticoCamara, leisSancionadasNoAno, listarSituacaoCamara } from '@/lib/server/camara'
 import { processosDoAno } from '@/lib/server/senado'
 import { indicadoresDoAno, IndicadoresCasa, INDICADORES_VAZIOS, porMesDoAno } from '@/lib/server/indicadores'
+import { contagemPorTema } from '@/lib/server/temas'
 
 const PRIMEIRO_ANO = 2023 // a tabela da Câmara é carregada a partir deste ano
 
@@ -20,13 +21,14 @@ function anosDisponiveis() {
 async function fetchDashboardData(year: number) {
   await connection() // renderiza a cada request, como o antigo cache: 'no-store'
 
-  const [camaraRes, senadoRes, indicadores, meses, diag, leis] = await Promise.allSettled([
+  const [camaraRes, senadoRes, indicadores, meses, diag, leis, temasRes] = await Promise.allSettled([
     listarSituacaoCamara({ ano: year }, 1, 10),
     processosDoAno('PL', year),
     indicadoresDoAno(year),
     porMesDoAno(year),
     diagnosticoCamara(year),
     leisSancionadasNoAno(year),
+    contagemPorTema(year),
   ])
 
   const bills = camaraRes.status === 'fulfilled' ? camaraRes.value.dados : []
@@ -38,7 +40,9 @@ async function fetchDashboardData(year: number) {
 
   const leisNoAno = leis.status === 'fulfilled' ? leis.value : null
 
-  return { bills, senadoData, kpis, porMes, avisoCamara, leisNoAno }
+  const temas = temasRes.status === 'fulfilled' ? temasRes.value : []
+
+  return { bills, senadoData, kpis, porMes, avisoCamara, leisNoAno, temas }
 }
 
 const fmt = (n: number | null) => (n === null ? '—' : n.toLocaleString('pt-BR'))
@@ -81,7 +85,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const atual = new Date().getFullYear()
   const pedido = parseInt(sp.ano ?? '')
   const year = anosDisponiveis().includes(pedido) ? pedido : atual
-  const { bills, senadoData, kpis, porMes, avisoCamara, leisNoAno } = await fetchDashboardData(year)
+  const { bills, senadoData, kpis, porMes, avisoCamara, leisNoAno, temas } = await fetchDashboardData(year)
   const mesesVisiveis = year === atual ? new Date().getMonth() + 1 : 12
 
   return (
@@ -118,7 +122,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       {/* Gráficos */}
-      <DashboardCharts ano={year} mesesVisiveis={mesesVisiveis} kpis={kpis} porMes={porMes} />
+      <DashboardCharts ano={year} mesesVisiveis={mesesVisiveis} kpis={kpis} porMes={porMes} temas={temas} />
 
       {/* Jornada */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5">

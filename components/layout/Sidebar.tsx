@@ -7,6 +7,7 @@ const NAV = [
   { href: '/dashboard', label: 'Dados Gerais' },
   { href: '/agenda', label: 'Agenda Legislativa' },
   { href: '/busca', label: 'Busca Avançada' },
+  { href: '/temas', label: 'Proposições por Tema' },
   { href: '/monitoramento', label: 'Monitoramento por Temas' },
 ]
 

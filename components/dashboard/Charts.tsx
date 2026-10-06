@@ -102,7 +102,7 @@ export function DashboardCharts({ ano, mesesVisiveis, kpis, porMes, temas }: Pro
         ) : <SemDados />}
       </Cartao>
       <div className="xl:col-span-2">
-        <Cartao titulo={`PLs de ${ano} por tema`} sub="Os 10 temas mais frequentes, pelo tema principal de cada projeto (oficial da Câmara ou previsto pelo modelo)">
+        <Cartao titulo={`PLs de ${ano} por tema`} sub="Os 10 temas mais frequentes (oficiais da Câmara ou previstos pelo modelo). Um projeto pode ter mais de um tema e conta em cada um.">
           {porTema.length ? (
             <>
               <ResponsiveContainer width="100%" height={36 * porTema.length + 40}>

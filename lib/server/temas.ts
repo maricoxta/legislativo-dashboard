@@ -45,6 +45,25 @@ export async function listarPorTema(tema: string, ano: number, casa: 'camara' | 
   return { dados: (data ?? []) as PlTema[], total: count ?? 0 }
 }
 
+// Todos os PLs do tema no ano, para o download em CSV. O PostgREST devolve no
+// máximo 1000 linhas por requisição, então lê em lotes.
+export async function todosPorTema(tema: string, ano: number, casa: 'camara' | 'senado' | null) {
+  const LOTE = 1000
+  const todos: PlTema[] = []
+  for (let inicio = 0; ; inicio += LOTE) {
+    let q = cliente().from('pl_temas').select('*').filter('temas', 'cs', arrayLiteral([tema])).eq('ano', ano)
+    if (casa) q = q.eq('casa', casa)
+    const { data, error } = await q
+      .order('data_apresentacao', { ascending: false, nullsFirst: false })
+      .order('casa')
+      .order('id', { ascending: false })
+      .range(inicio, inicio + LOTE - 1)
+    if (error) throw new Error(error.message)
+    todos.push(...((data ?? []) as PlTema[]))
+    if (!data || data.length < LOTE) return todos
+  }
+}
+
 export async function ultimaAvaliacao(): Promise<AvaliacaoClassificacao | null> {
   const { data, error } = await cliente()
     .from('classificacao_avaliacao')

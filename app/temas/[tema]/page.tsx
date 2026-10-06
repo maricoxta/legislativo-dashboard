@@ -69,6 +69,12 @@ export default async function TemaPage({ params, searchParams }: Props) {
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500"><strong className="text-slate-800">{total.toLocaleString('pt-BR')}</strong> projetos · pág. {page}/{totalPages}</p>
         <div className="flex gap-2">
+          {total > 0 && (
+            <a href={`/temas/${encodeURIComponent(tema)}/csv?${new URLSearchParams({ ano: String(ano), ...(casa ? { casa } : {}) })}`}
+              className="px-3 py-1.5 text-xs border border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50">
+              Baixar CSV
+            </a>
+          )}
           {page > 1 && <a href={link({ pagina: String(page - 1) })} className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50">← Anterior</a>}
           {page < totalPages && <a href={link({ pagina: String(page + 1) })} className="px-3 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50">Próxima →</a>}
         </div>

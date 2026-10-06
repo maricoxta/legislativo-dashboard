@@ -19,7 +19,11 @@ interface Props {
 
 export default async function TemaPage({ params, searchParams }: Props) {
   await connection()
-  const tema = decodeURIComponent((await params).tema)
+  const bruto = (await params).tema
+  let tema = bruto
+  try {
+    tema = decodeURIComponent(bruto)
+  } catch {}
   const sp = await searchParams
   const pedido = parseInt(sp.ano ?? '')
   const ano = anosDisponiveis().includes(pedido) ? pedido : new Date().getFullYear()

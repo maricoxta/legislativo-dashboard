@@ -26,9 +26,16 @@ export async function contagemPorTema(ano: number): Promise<ContagemTema[]> {
   return [...porTema.values()].sort((a, b) => b.total - a.total)
 }
 
+// Literal de array do Postgres com cada item entre aspas. O .contains() do
+// supabase-js junta os itens sem aspas, e temas com vírgula ("Energia, Recursos
+// Hídricos e Minerais") viravam dois elementos e não casavam com nenhum PL.
+function arrayLiteral(itens: string[]): string {
+  return `{${itens.map((i) => `"${i.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')}}`
+}
+
 export async function listarPorTema(tema: string, ano: number, casa: 'camara' | 'senado' | null, pagina: number, porPagina: number) {
   const inicio = (pagina - 1) * porPagina
-  let q = cliente().from('pl_temas').select('*', { count: 'exact' }).contains('temas', [tema]).eq('ano', ano)
+  let q = cliente().from('pl_temas').select('*', { count: 'exact' }).filter('temas', 'cs', arrayLiteral([tema])).eq('ano', ano)
   if (casa) q = q.eq('casa', casa)
   const { data, count, error } = await q
     .order('data_apresentacao', { ascending: false, nullsFirst: false })

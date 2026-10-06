@@ -1,6 +1,8 @@
 'use client'
 import { Bar, BarChart, CartesianGrid, LabelList, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import Link from 'next/link'
 import type { IndicadoresCasa } from '@/lib/server/indicadores'
+import type { ContagemTema } from '@/types/temas'
 import { CASA_HEX, STATUS_GRAFICO } from './paleta'
 
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
@@ -14,7 +16,10 @@ interface Props {
   mesesVisiveis: number // no ano corrente, só até o mês atual
   kpis: { camara: IndicadoresCasa; senado: IndicadoresCasa }
   porMes: { camara: number[] | null; senado: number[] | null }
+  temas: ContagemTema[]
 }
+
+const TEMAS_NO_GRAFICO = 10
 
 function Cartao({ titulo, sub, children }: { titulo: string; sub: string; children: React.ReactNode }) {
   return (
@@ -28,7 +33,7 @@ function Cartao({ titulo, sub, children }: { titulo: string; sub: string; childr
 
 const SemDados = () => <p className="h-[240px] flex items-center justify-center text-sm text-slate-400">Sem dados para este ano.</p>
 
-export function DashboardCharts({ ano, mesesVisiveis, kpis, porMes }: Props) {
+export function DashboardCharts({ ano, mesesVisiveis, kpis, porMes, temas }: Props) {
   // Situação: % dos PLs do ano em cada situação, lado a lado por Casa.
   // As situações não somam 100% (um PL aprovado no Senado pode seguir
   // tramitando na Câmara), por isso não é um gráfico empilhado.
@@ -49,6 +54,8 @@ export function DashboardCharts({ ano, mesesVisiveis, kpis, porMes }: Props) {
     camara: porMes.camara?.[i] ?? null,
     senado: porMes.senado?.[i] ?? null,
   }))
+
+  const porTema = temas.slice(0, TEMAS_NO_GRAFICO)
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -94,6 +101,30 @@ export function DashboardCharts({ ano, mesesVisiveis, kpis, porMes }: Props) {
           </ResponsiveContainer>
         ) : <SemDados />}
       </Cartao>
+      <div className="xl:col-span-2">
+        <Cartao titulo={`PLs de ${ano} por tema`} sub="Os 10 temas mais frequentes, pelo tema principal de cada projeto (oficial da Câmara ou previsto pelo modelo)">
+          {porTema.length ? (
+            <>
+              <ResponsiveContainer width="100%" height={36 * porTema.length + 40}>
+                <BarChart data={porTema} layout="vertical" margin={{ left: 0, right: 40 }} barGap={2} barCategoryGap="20%">
+                  <CartesianGrid horizontal={false} stroke="#e2e8f0" />
+                  <XAxis type="number" tick={EIXO} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="tema" tick={EIXO} width={240} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v, nome) => [`${fmt(Number(v))} PLs`, nome]} />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} formatter={legenda} />
+                  <Bar dataKey="camara" name="Câmara" fill={CASA_HEX.camara} radius={[0, 4, 4, 0]}>
+                    <LabelList dataKey="camara" position="right" fill="#475569" fontSize={11} formatter={(v) => fmt(Number(v))} />
+                  </Bar>
+                  <Bar dataKey="senado" name="Senado" fill={CASA_HEX.senado} radius={[0, 4, 4, 0]}>
+                    <LabelList dataKey="senado" position="right" fill="#475569" fontSize={11} formatter={(v) => fmt(Number(v))} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <Link href={`/temas?ano=${ano}`} className="text-xs text-indigo-600 hover:underline font-medium">Ver todos os temas →</Link>
+            </>
+          ) : <SemDados />}
+        </Cartao>
+      </div>
     </div>
   )
 }

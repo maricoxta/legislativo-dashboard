@@ -78,6 +78,19 @@ a partir do arquivo anual `proposicoes-{ano}.csv` da Câmara.
 2. Em GitHub → Settings → Secrets and variables → Actions, crie `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`.
 3. Na aba Actions, rode "Situação dos PLs da Câmara" uma vez (depois ele roda sozinho às 6h).
 
+### Classificação temática (job diário)
+
+A página Proposições por Tema e o gráfico de temas do dashboard leem a tabela
+`pl_temas`, gravada todo dia pelo workflow `.github/workflows/classificacao-tematica.yml`
+(script `jobs/classificacao_tematica.py`). O job treina um modelo TF-IDF + Regressão
+Logística com os temas oficiais da Câmara (`proposicoesTemas-{ano}.csv`), compara com
+a busca por palavras-chave no ano de teste, grava a avaliação em `classificacao_avaliacao`
+e classifica os PLs de 2023 em diante: tema oficial quando a Câmara já indexou o PL,
+tema previsto para os demais e para todos os do Senado.
+
+1. Rode `supabase/migrations/20261006_pl_temas.sql` no SQL Editor do Supabase.
+2. Na aba Actions, rode "Classificação temática" uma vez (depois ele roda sozinho às 7h).
+
 ### Iniciar
 
 ```bash

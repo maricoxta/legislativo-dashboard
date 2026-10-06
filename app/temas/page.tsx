@@ -11,23 +11,29 @@ function ComoFunciona({ a }: { a: AvaliacaoClassificacao | null }) {
   const m2 = a?.metricas.m2_tfidf_logreg
   const m1 = a?.metricas.m1_palavras_chave
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 text-sm text-slate-600 space-y-2">
-      <h2 className="text-sm font-semibold text-slate-800">Como os temas são atribuídos</h2>
-      <p>
-        Quando a Câmara já indexou o projeto, o site usa os <strong>temas oficiais</strong>. Os projetos ainda sem
-        indexação e todos os do Senado recebem os <strong>temas previstos por um modelo</strong> de aprendizado de máquina
-        (TF-IDF + Regressão Logística) treinado com a indexação oficial da Câmara. Assim, as duas Casas ficam organizadas
-        pelos mesmos temas. O modelo é treinado e aplicado de novo todo dia.
-      </p>
-      {a && m1 && m2 && (
+    // Fechado por padrão: quem quiser entender o método abre o "Saiba mais".
+    <details className="group bg-white rounded-xl shadow-sm border border-slate-100 px-5 py-3 text-sm text-slate-600">
+      <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+        <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+        Saiba mais: como os temas são atribuídos
+      </summary>
+      <div className="space-y-2 pt-3 pb-1">
         <p>
-          No teste com os PLs da Câmara de {a.ano_teste} ({fmt(a.parametros.pls_teste)} projetos, treino com {a.anos_treino}),
-          o modelo acertou o tema principal em <strong>{pct(m2.acerto_tema_principal ?? 0)}</strong> dos projetos, com
-          F1 de <strong>{pct(m2.f1_micro)}</strong>, contra {pct(m1.f1_micro)} da busca por palavras-chave.
-          <span className="text-slate-400"> Última execução: {new Date(a.executado_em).toLocaleDateString('pt-BR')}.</span>
+          Quando a Câmara já indexou o projeto, o site usa os <strong>temas oficiais</strong>. Os projetos ainda sem
+          indexação e todos os do Senado recebem os <strong>temas previstos por um modelo</strong> de aprendizado de máquina
+          (TF-IDF + Regressão Logística) treinado com a indexação oficial da Câmara. Assim, as duas Casas ficam organizadas
+          pelos mesmos temas. O modelo é treinado e aplicado de novo todo dia.
         </p>
-      )}
-    </div>
+        {a && m1 && m2 && (
+          <p>
+            No teste com os PLs da Câmara de {a.ano_teste} ({fmt(a.parametros.pls_teste)} projetos, treino com {a.anos_treino}),
+            o modelo acertou o tema principal em <strong>{pct(m2.acerto_tema_principal ?? 0)}</strong> dos projetos, com
+            F1 de <strong>{pct(m2.f1_micro)}</strong>, contra {pct(m1.f1_micro)} da busca por palavras-chave.
+            <span className="text-slate-400"> Última execução: {new Date(a.executado_em).toLocaleDateString('pt-BR')}.</span>
+          </p>
+        )}
+      </div>
+    </details>
   )
 }
 

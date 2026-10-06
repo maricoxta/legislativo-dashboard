@@ -132,3 +132,9 @@ As chamadas nunca saem direto do browser — passam pelas API routes do Next.js 
 - `https://legis.senado.leg.br/dadosabertos` — dados abertos do Senado
 
 Cache: 30 min para listagens, 60 min para detalhes de proposições.
+
+---
+
+## Licença
+
+Código distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE).

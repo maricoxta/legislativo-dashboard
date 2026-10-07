@@ -14,8 +14,26 @@ export interface FiltroSenado {
   sigla?: string
   numero?: string
   termo?: string
+  autor?: string
   ano?: number
   limite?: number
+}
+
+// Com o nome do autor, o resultado é pequeno e a API aceita a consulta sem
+// datas: uma chamada traz todos os anos (ou só o ano escolhido).
+async function processosPorAutor(f: FiltroSenado, limite: number): Promise<ProcessoSenado[]> {
+  const qs = new URLSearchParams({ autor: f.autor ?? '' })
+  if (f.ano) qs.set('ano', String(f.ano))
+  if (f.sigla) qs.set('sigla', f.sigla)
+  if (f.numero) qs.set('numero', f.numero)
+  if (f.termo) qs.set('termo', f.termo)
+
+  const res = await fetch(`${SENADO_API}/processo?${qs}`, { headers: { Accept: 'application/json' } })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const lote: ProcessoSenado[] = await res.json()
+  return (Array.isArray(lote) ? lote : [])
+    .sort((a, b) => (b.dataApresentacao ?? '').localeCompare(a.dataApresentacao ?? ''))
+    .slice(0, limite)
 }
 
 // Usado pela rota /api/senado/processos e direto pelas páginas do servidor.
@@ -23,12 +41,23 @@ export async function listarProcessosSenado(f: FiltroSenado): Promise<ProcessoSe
   const sigla = f.sigla ?? ''
   const numero = f.numero ?? ''
   const termo = f.termo ?? ''
+  const autor = f.autor ?? ''
   const ano = f.ano || new Date().getFullYear()
   const limite = Math.min(f.limite || 20, 100)
 
-  const cacheKey = `senado:processos:${sigla}:${numero}:${termo}:${ano}:${limite}`
+  const cacheKey = `senado:processos:${sigla}:${numero}:${termo}:${autor}:${f.ano ?? ''}:${ano}:${limite}`
   const cached = await getCached<ProcessoSenado[]>(cacheKey)
   if (cached) return cached
+
+  if (autor) {
+    try {
+      const processos = await processosPorAutor(f, limite)
+      await setCache(cacheKey, processos, 30)
+      return processos
+    } catch {
+      // Se a API exigir datas, segue pelas janelas abaixo, filtrando pelo autor.
+    }
+  }
 
   const inicioAno = new Date(Date.UTC(ano, 0, 1))
   const hoje = new Date()
@@ -44,6 +73,7 @@ export async function listarProcessosSenado(f: FiltroSenado): Promise<ProcessoSe
     if (sigla) qs.set('sigla', sigla)
     if (numero) qs.set('numero', numero)
     if (termo) qs.set('termo', termo)
+    if (autor) qs.set('autor', autor)
 
     const res = await fetch(`${SENADO_API}/processo?${qs}`, { headers: { Accept: 'application/json' } })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)

@@ -18,23 +18,24 @@ export function BuscaForm({ initialParams }: Props) {
   const router = useRouter()
   const [q, setQ] = useState(initialParams.q ?? '')
   const [numero, setNumero] = useState(initialParams.numero ?? '')
+  const [autor, setAutor] = useState(initialParams.autor ?? '')
   const [tipo, setTipo] = useState(initialParams.tipo ?? '')
   const [ano, setAno] = useState(initialParams.ano ?? '')
   const [codTema, setCodTema] = useState(initialParams.codTema ?? '')
   const [partido, setPartido] = useState(initialParams.partido ?? '')
   const [uf, setUf] = useState(initialParams.uf ?? '')
   const [useCamara, setUseCamara] = useState(true)
-  const [useSenado, setUseSenado] = useState(false)
+  const [useSenado, setUseSenado] = useState(Boolean(initialParams.autor))
 
   const [results, setResults] = useState<{ camara: ProposicaoCamara[]; senado: ProcessoSenado[] } | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (initialParams.q || initialParams.numero) doSearch()
+    if (initialParams.q || initialParams.numero || initialParams.autor) doSearch()
   }, [])
 
   async function doSearch() {
-    const hasInput = q || numero || partido || uf || tipo || codTema
+    const hasInput = q || numero || autor || partido || uf || tipo || codTema
     if (!hasInput) return
 
     setLoading(true)
@@ -47,12 +48,14 @@ export function BuscaForm({ initialParams }: Props) {
       if (numero) camaraQs.set('numero', numero)
       if (partido) camaraQs.set('siglaPartidoAutor', partido)
       if (uf) camaraQs.set('siglaUfAutor', uf)
+      if (autor) camaraQs.set('autor', autor.trim())
 
-      const senadoQs = new URLSearchParams({ limite: '10' })
+      const senadoQs = new URLSearchParams({ limite: autor ? '100' : '10' })
       if (q) senadoQs.set('termo', q)
       if (ano) senadoQs.set('ano', ano)
       if (tipo) senadoQs.set('sigla', tipo)
       if (numero) senadoQs.set('numero', numero)
+      if (autor) senadoQs.set('autor', autor.trim())
 
       const [cr, sr] = await Promise.allSettled([
         useCamara ? fetch(`/api/camara/proposicoes?${camaraQs}`).then(r => r.json()) : Promise.resolve({ dados: [] }),
@@ -85,6 +88,13 @@ export function BuscaForm({ initialParams }: Props) {
             <input type="text" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()}
               placeholder="ex: reforma tributária, saneamento..."
               className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-slate-600 mb-1">Autoria (deputado ou senador)</label>
+            <input type="text" value={autor} onChange={e => setAutor(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()}
+              placeholder="ex: Tabata Amaral, Damares Alves..."
+              className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <p className="text-xs text-slate-400 mt-1">Nome ou parte do nome. Sem ano escolhido, traz os 100 mais recentes desde 2018. Para senadores, marque Senado em “Buscar em”.</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1">Número</label>
@@ -149,7 +159,7 @@ export function BuscaForm({ initialParams }: Props) {
             className="px-6 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
             🔍 Buscar
           </button>
-          <button onClick={() => { setQ(''); setNumero(''); setTipo(''); setAno(''); setCodTema(''); setPartido(''); setUf(''); setResults(null) }}
+          <button onClick={() => { setQ(''); setNumero(''); setAutor(''); setTipo(''); setAno(''); setCodTema(''); setPartido(''); setUf(''); setResults(null) }}
             className="px-4 py-2.5 border border-slate-200 text-slate-600 text-sm rounded-lg hover:bg-slate-50 transition-colors">
             Limpar
           </button>

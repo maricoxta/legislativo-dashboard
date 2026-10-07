@@ -26,6 +26,29 @@ export async function listarProposicoesCamara(params: URLSearchParams): Promise<
   return data
 }
 
+// Busca por autoria. Sem ano nem datas, a API da Câmara só devolve o que
+// tramitou nos últimos 30 dias; por isso, sem ano escolhido, consultamos
+// cada ano desde ANO_INICIAL_AUTORIA e juntamos os mais recentes primeiro.
+const ANO_INICIAL_AUTORIA = 2018
+
+export async function listarPorAutorCamara(params: URLSearchParams, limite = 100): Promise<ListaCamara> {
+  const ano = params.get('ano')
+  const atual = new Date().getFullYear()
+  const anos = ano ? [Number(ano)] : Array.from({ length: atual - ANO_INICIAL_AUTORIA + 1 }, (_, i) => atual - i)
+
+  const lotes = await Promise.all(anos.map(a => {
+    const qs = new URLSearchParams(params)
+    qs.set('ano', String(a))
+    qs.set('itens', String(limite))
+    qs.set('ordem', 'DESC')
+    qs.set('ordenarPor', 'id')
+    return listarProposicoesCamara(qs).then(r => r.dados ?? [])
+  }))
+
+  const dados = lotes.flat().sort((a, b) => b.id - a.id).slice(0, limite)
+  return { dados }
+}
+
 // ---------- Situação dos PLs (tabela camara_pl_situacao) ----------
 // A API da Câmara ignora o filtro codSituacao, então a situação de cada PL
 // vem da tabela que o job jobs/camara_situacao.py carrega todo dia.

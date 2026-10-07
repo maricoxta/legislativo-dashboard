@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
       sigla: sp.get('sigla') ?? undefined,
       numero: sp.get('numero') ?? undefined,
       termo: sp.get('termo') ?? undefined,
+      autor: sp.get('autor') ?? undefined,
       ano: Number(sp.get('ano')) || undefined,
       limite: Number(sp.get('limite')) || undefined,
     })
